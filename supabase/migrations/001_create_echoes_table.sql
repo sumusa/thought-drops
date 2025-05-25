@@ -21,4 +21,4 @@ CREATE POLICY "Allow anonymous read for revealed and unclaimed echoes"
 ON public.echoes
 FOR SELECT
 TO anon
-USING (reveal_at <= now() AND is_claimed = false); 
+USING (reveal_at <= now() AND is_claimed = false);
