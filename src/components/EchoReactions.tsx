@@ -41,7 +41,7 @@ export function EchoReactions({
     setIsLoading(reactionType);
     
     try {
-      const { error } = await supabase.rpc('toggle_echo_reaction', {
+      const { data, error } = await supabase.rpc('toggle_echo_reaction', {
         p_echo_id: echoId,
         p_user_id: userId,
         p_reaction_type: reactionType
@@ -52,6 +52,23 @@ export function EchoReactions({
         return;
       }
 
+      // The RPC now returns reaction status and counts
+      if (data && data.length > 0) {
+        const { is_reacted, previous_reaction_type } = data[0];
+        
+        if (previous_reaction_type && previous_reaction_type !== reactionType) {
+          // User changed reaction type
+          console.log(`Changed reaction from ${previous_reaction_type} to ${reactionType}`);
+        } else if (is_reacted) {
+          // User added new reaction
+          console.log(`Added ${reactionType} reaction`);
+        } else {
+          // User removed reaction
+          console.log(`Removed ${reactionType} reaction`);
+        }
+      }
+
+      // Trigger parent component to refresh the echo data
       onReactionChange?.();
     } catch (error) {
       console.error('Error toggling reaction:', error);

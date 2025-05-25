@@ -171,6 +171,65 @@ function App() {
     }
   };
 
+  const handleRefreshCurrentEcho = async () => {
+    if (!caughtEcho || !user?.id) return;
+    
+    try {
+      // Fetch updated echo data
+      const { data: echoData, error } = await supabase
+        .from('echoes')
+        .select(`
+          id,
+          content,
+          like_count,
+          love_count,
+          laugh_count,
+          think_count,
+          sad_count,
+          fire_count,
+          total_reactions
+        `)
+        .eq('id', caughtEcho.id)
+        .single();
+
+      if (error) {
+        console.error('Error refreshing echo:', error);
+        return;
+      }
+
+      // Fetch user's reactions for this echo
+      const { data: userReactions, error: reactionsError } = await supabase
+        .from('echo_reactions')
+        .select('reaction_type')
+        .eq('user_id', user.id)
+        .eq('echo_id', caughtEcho.id);
+
+      if (reactionsError) {
+        console.error('Error fetching user reactions:', reactionsError);
+        return;
+      }
+
+      // Build user reaction flags
+      const reactionTypes = userReactions?.map(r => r.reaction_type) || [];
+      const updatedEcho = {
+        ...echoData,
+        user_like_reaction: reactionTypes.includes('like'),
+        user_love_reaction: reactionTypes.includes('love'),
+        user_laugh_reaction: reactionTypes.includes('laugh'),
+        user_think_reaction: reactionTypes.includes('think'),
+        user_sad_reaction: reactionTypes.includes('sad'),
+        user_fire_reaction: reactionTypes.includes('fire'),
+        // Legacy compatibility
+        likes_count: echoData.like_count,
+        is_liked_by_user: reactionTypes.includes('like')
+      };
+
+      setCaughtEcho(updatedEcho);
+    } catch (error) {
+      console.error('Error in handleRefreshCurrentEcho:', error);
+    }
+  };
+
   if (authLoading) {
     return (
       <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
@@ -329,9 +388,11 @@ function App() {
                                   user_fire_reaction: caughtEcho.user_fire_reaction,
                                 }}
                                 onReactionChange={() => {
-                                  // Refresh the echo data after reaction change
+                                  // Refresh the sidebar
                                   setLikedEchoesRefreshTrigger(prev => prev + 1);
-                                  // Optionally re-fetch the current echo to update counts
+                                  // The EchoReactions component will handle updating its own state
+                                  // We'll need to re-fetch the echo to get updated counts
+                                  handleRefreshCurrentEcho();
                                 }}
                               />
                               <div className="flex justify-between items-center pt-2">
