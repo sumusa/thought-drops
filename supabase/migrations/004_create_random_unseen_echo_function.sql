@@ -1,9 +1,22 @@
 CREATE OR REPLACE FUNCTION get_random_unseen_echo(p_user_id UUID)
-RETURNS TABLE (id UUID, content TEXT) -- Defines the structure of the returned row(s)
+RETURNS TABLE (
+  id UUID,
+  content TEXT,
+  likes_count INTEGER,
+  is_liked_by_user BOOLEAN
+)
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT e.id, e.content
+  SELECT
+    e.id,
+    e.content,
+    e.likes_count,
+    EXISTS (
+      SELECT 1
+      FROM public.user_echo_likes uel
+      WHERE uel.echo_id = e.id AND uel.user_id = p_user_id
+    ) AS is_liked_by_user
   FROM public.echoes e
   WHERE NOT EXISTS (
     SELECT 1

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabaseClient"; // Adjusted import path
 import { useState } from "react";
 import { toast } from "sonner"; // Corrected import for toast
+import { Send } from 'lucide-react'; // Import Send icon
 
 export function EchoSubmitForm() {
   const [echoText, setEchoText] = useState("");
@@ -82,8 +83,16 @@ export function EchoSubmitForm() {
           />
         </div>
         <DialogFooter>
-          <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Submitting..." : "Submit"}
+          <Button 
+            type="button" 
+            onClick={handleSubmit} 
+            disabled={isLoading}
+            className="bg-calm-accent hover:bg-teal-500 text-white dark:text-calm-bg font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-2"
+          >
+            <Send className="w-4 h-4" />
+            <span>
+              {isLoading ? "Submitting..." : "Submit Echo"}
+            </span>
           </Button>
         </DialogFooter>
       </DialogContent>
