@@ -4,12 +4,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Heart, MessageSquareQuote, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { REACTION_CONFIGS } from '@/types/reactions';
+import type { ReactionType } from '@/types/reactions';
 
-interface LikedEcho {
+interface ReactedEcho {
   id: string;
   content: string;
-  likes_count: number;
+  like_count: number;
+  love_count: number;
+  laugh_count: number;
+  think_count: number;
+  sad_count: number;
+  fire_count: number;
+  total_reactions: number;
   created_at: string;
+  reaction_type: ReactionType;
+  reaction_created_at: string;
 }
 
 interface LikedEchoesProps {
@@ -18,44 +28,51 @@ interface LikedEchoesProps {
   refreshTrigger?: number;
 }
 
-const RECENT_LIKED_LIMIT = 20;
+const RECENT_REACTIONS_LIMIT = 20;
 
 export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps) {
-  const [likedEchoes, setLikedEchoes] = useState<LikedEcho[]>([]);
+  const [reactedEchoes, setReactedEchoes] = useState<ReactedEcho[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [unlikingIds, setUnlikingIds] = useState<Set<string>>(new Set());
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user?.id) {
-      fetchLikedEchoes();
+      fetchReactedEchoes();
     }
   }, [user?.id, refreshTrigger]);
 
-  const fetchLikedEchoes = async () => {
+  const fetchReactedEchoes = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
     try {
-      // Fetch the most recently liked echoes (last 5)
+      // Fetch the most recently reacted echoes
       const { data, error } = await supabase
-        .from('user_echo_likes')
+        .from('echo_reactions')
         .select(`
           echo_id,
+          reaction_type,
           created_at,
           echoes (
             id,
             content,
-            likes_count,
+            like_count,
+            love_count,
+            laugh_count,
+            think_count,
+            sad_count,
+            fire_count,
+            total_reactions,
             created_at
           )
         `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false }) // Most recently liked first
-        .limit(RECENT_LIKED_LIMIT);
+        .order('created_at', { ascending: false }) // Most recently reacted first
+        .limit(RECENT_REACTIONS_LIMIT);
 
       if (error) {
-        console.error('Error fetching recently liked echoes:', error);
-        toast.error('Failed to load recently liked echoes');
+        console.error('Error fetching recently reacted echoes:', error);
+        toast.error('Failed to load recent reactions');
         return;
       }
 
@@ -63,48 +80,59 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
       const transformedData = data?.map(item => ({
         id: item.echoes.id,
         content: item.echoes.content,
-        likes_count: item.echoes.likes_count,
+        like_count: item.echoes.like_count,
+        love_count: item.echoes.love_count,
+        laugh_count: item.echoes.laugh_count,
+        think_count: item.echoes.think_count,
+        sad_count: item.echoes.sad_count,
+        fire_count: item.echoes.fire_count,
+        total_reactions: item.echoes.total_reactions,
         created_at: item.echoes.created_at,
+        reaction_type: item.reaction_type as ReactionType,
+        reaction_created_at: item.created_at,
       })) || [];
 
-      setLikedEchoes(transformedData);
+      setReactedEchoes(transformedData);
     } catch (error: any) {
-      console.error('Error in fetchLikedEchoes:', error);
-      toast.error('An error occurred while loading recently liked echoes');
+      console.error('Error in fetchReactedEchoes:', error);
+      toast.error('An error occurred while loading recent reactions');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUnlike = async (echoId: string) => {
+  const handleRemoveReaction = async (echoId: string, reactionType: ReactionType) => {
     if (!user?.id) return;
 
-    setUnlikingIds(prev => new Set(prev).add(echoId));
+    const reactionKey = `${echoId}-${reactionType}`;
+    setRemovingIds(prev => new Set(prev).add(reactionKey));
     try {
       const { error } = await supabase.rpc(
-        'toggle_like_echo',
-        { p_echo_id: echoId, p_user_id: user.id }
+        'toggle_echo_reaction',
+        { p_echo_id: echoId, p_user_id: user.id, p_reaction_type: reactionType }
       );
 
       if (error) {
-        console.error('Error unliking echo:', error);
-        toast.error('Failed to unlike echo');
+        console.error('Error removing reaction:', error);
+        toast.error('Failed to remove reaction');
         return;
       }
 
-      // Remove the echo from the liked list
-      setLikedEchoes(prev => prev.filter(echo => echo.id !== echoId));
-      toast.success('Echo unliked');
+      // Remove the reaction from the list
+      setReactedEchoes(prev => prev.filter(echo => !(echo.id === echoId && echo.reaction_type === reactionType)));
+      toast.success('Reaction removed');
       
-      // Call the optional callback
-      onUnlike?.(echoId);
+      // Call the optional callback (for legacy compatibility)
+      if (reactionType === 'like') {
+        onUnlike?.(echoId);
+      }
     } catch (error: any) {
-      console.error('Error in handleUnlike:', error);
-      toast.error('An error occurred while unliking');
+      console.error('Error in handleRemoveReaction:', error);
+      toast.error('An error occurred while removing reaction');
     } finally {
-      setUnlikingIds(prev => {
+      setRemovingIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(echoId);
+        newSet.delete(reactionKey);
         return newSet;
       });
     }
@@ -116,22 +144,22 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
         <div className="relative">
           <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
         </div>
-        <p className="text-gray-400 mt-4 text-sm">Loading your echoes...</p>
+        <p className="text-gray-400 mt-4 text-sm">Loading your reactions...</p>
       </div>
     );
   }
 
-  if (likedEchoes.length === 0) {
+  if (reactedEchoes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-6 text-center">
         <div className="p-3 bg-white/5 rounded-2xl mb-3">
           <Heart className="w-6 h-6 text-gray-400" />
         </div>
         <h3 className="text-base font-semibold text-white mb-2">
-          No Recent Likes
+          No Recent Reactions
         </h3>
         <p className="text-gray-400 text-sm leading-relaxed">
-          Your recently liked echoes will appear here for quick access.
+          Your recently reacted echoes will appear here for quick access.
         </p>
       </div>
     );
@@ -141,58 +169,69 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent hover:scrollbar-thumb-slate-500/70">
         <div className="space-y-3">
-          {likedEchoes.map((echo) => (
-            <div key={echo.id} className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              <Card className="relative bg-slate-900/50 backdrop-blur-sm border-slate-600/30 rounded-xl hover:border-slate-500/50 transition-all duration-200">
-                <CardHeader className="flex flex-row items-center justify-between pb-3 px-4 pt-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full"></div>
-                    <CardDescription className="text-gray-400 text-xs">
-                      {new Date(echo.created_at).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: new Date(echo.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                      })}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleUnlike(echo.id)}
-                    disabled={unlikingIds.has(echo.id)}
-                    className="flex items-center space-x-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2 rounded-lg transition-all duration-200"
-                  >
-                    {unlikingIds.has(echo.id) ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Heart className="w-3 h-3 fill-red-500" />
-                    )}
-                    <span className="text-xs font-medium">{echo.likes_count}</span>
-                  </Button>
-                </CardHeader>
-                <CardContent className="pt-0 px-4 pb-4">
-                  <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">
-                    {echo.content}
-                  </p>
-                  <div className="mt-3 pt-3 border-t border-slate-700/50">
-                    <div className="text-xs text-gray-500">
-                      Echo #{echo.id.slice(0, 8)}
+          {reactedEchoes.map((echo) => {
+            const reactionConfig = REACTION_CONFIGS.find(config => config.type === echo.reaction_type);
+            const reactionKey = `${echo.id}-${echo.reaction_type}`;
+            const isRemoving = removingIds.has(reactionKey);
+            
+            return (
+              <div key={reactionKey} className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                <Card className="relative bg-slate-900/50 backdrop-blur-sm border-slate-600/30 rounded-xl hover:border-slate-500/50 transition-all duration-200">
+                  <CardHeader className="flex flex-row items-center justify-between pb-3 px-4 pt-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full"></div>
+                      <CardDescription className="text-gray-400 text-xs">
+                        {new Date(echo.reaction_created_at).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: new Date(echo.reaction_created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                        })}
+                      </CardDescription>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveReaction(echo.id, echo.reaction_type)}
+                      disabled={isRemoving}
+                      className={`flex items-center space-x-1.5 hover:bg-red-500/10 h-7 px-2 rounded-lg transition-all duration-200 ${reactionConfig?.color || 'text-gray-400'}`}
+                    >
+                      {isRemoving ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <span className="text-sm">{reactionConfig?.emoji || '❓'}</span>
+                      )}
+                      <span className="text-xs font-medium">
+                        {echo[`${echo.reaction_type}_count` as keyof ReactedEcho] as number}
+                      </span>
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="pt-0 px-4 pb-4">
+                    <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">
+                      {echo.content}
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+                      <div className="text-xs text-gray-500">
+                        Echo #{echo.id.slice(0, 8)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {echo.total_reactions} total reactions
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
         </div>
       </div>
       
-      {likedEchoes.length > 0 && (
+      {reactedEchoes.length > 0 && (
         <div className="text-center pt-3 border-t border-slate-700/50 flex-shrink-0">
           <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
             <Heart className="w-3 h-3 text-pink-400" />
             <span className="text-xs text-gray-400 font-medium">
-              {likedEchoes.length} recent {likedEchoes.length === 1 ? 'echo' : 'echoes'}
+              {reactedEchoes.length} recent {reactedEchoes.length === 1 ? 'reaction' : 'reactions'}
             </span>
           </div>
         </div>

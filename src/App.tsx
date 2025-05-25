@@ -16,10 +16,11 @@ import { toast } from "sonner"
 import { Heart, Sparkles, Wind, MessageSquareQuote, Loader2 } from 'lucide-react'; // Import Heart, Sparkles, and Wind icons, and MessageSquareQuote and Loader2
 import { EmptyEchoState, type NoEchoReason } from '@/components/custom/EmptyEchoState'; // Import NoEchoReason from EmptyEchoState
 import { LikedEchoes } from '@/components/custom/LikedEchoes';
+import { EchoReactions } from '@/components/EchoReactions';
+import type { EchoWithReactions } from '@/types/reactions';
 
-interface Echo {
-  id: string;
-  content: string;
+interface Echo extends EchoWithReactions {
+  // Legacy compatibility - keeping old interface for now
   likes_count: number;
   is_liked_by_user: boolean;
 }
@@ -30,7 +31,7 @@ function App() {
 
   const [caughtEcho, setCaughtEcho] = useState<Echo | null>(null);
   const [isCatching, setIsCatching] = useState(false);
-  const [isLiking, setIsLiking] = useState(false); // For disabling like button during RPC call
+  const [] = useState(false); // For disabling like button during RPC call
   const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
 
   // Add ref to trigger liked echoes refresh
@@ -88,11 +89,10 @@ function App() {
     setNoEchoReason('loading'); // Set reason to loading
 
     try {
-      // Call the Supabase database function
-      // It returns an array of objects: { data: [{id, content}], error }
-      // or { data: [], error } if no rows are found.
+      // Call the Supabase database function with reactions support
+      // It returns an array of objects with reaction data
       const { data: rpcData, error: rpcError } = await supabase.rpc(
-        'get_random_unseen_echo',
+        'get_random_unseen_echo_with_reactions',
         { p_user_id: user.id }
       );
 
@@ -107,7 +107,13 @@ function App() {
 
       // rpcData should be an array. It could be empty if no unseen echoes are found.
       if (rpcData && rpcData.length > 0) {
-        const actualEcho: Echo = rpcData[0]; // Get the first (and only) echo from the array
+        const echoData = rpcData[0];
+        // Add legacy compatibility fields
+        const actualEcho: Echo = {
+          ...echoData,
+          likes_count: echoData.like_count, // Legacy compatibility
+          is_liked_by_user: echoData.user_like_reaction // Legacy compatibility
+        };
         
         setCaughtEcho(actualEcho);
         setNoEchoReason(null); // Successfully caught an echo
@@ -153,52 +159,6 @@ function App() {
     }
   };
 
-  const handleLikeToggle = async (echoId: string) => {
-    if (!user || !user.id) {
-      toast.error("You must be signed in to like an echo.");
-      return;
-    }
-    if (!caughtEcho || caughtEcho.id !== echoId) return; // Safety check
-
-    setIsLiking(true);
-    try {
-      const { data: likeResult, error: likeError } = await supabase.rpc(
-        'toggle_like_echo',
-        { p_echo_id: echoId, p_user_id: user.id }
-      );
-
-      if (likeError) {
-        console.error("Error toggling like:", likeError);
-        toast.error(`Failed to update like: ${likeError.message}`);
-        return;
-      }
-
-      // The RPC function returns an array with one object: [{ is_liked, new_likes_count }]
-      if (likeResult && likeResult.length > 0) {
-        const { is_liked, new_likes_count } = likeResult[0];
-        setCaughtEcho(prevEcho => {
-          if (!prevEcho || prevEcho.id !== echoId) return prevEcho;
-          return {
-            ...prevEcho,
-            is_liked_by_user: is_liked,
-            likes_count: new_likes_count,
-          };
-        });
-        toast.success(is_liked ? "Echo liked!" : "Like removed.");
-        
-        // Trigger refresh of liked echoes sidebar
-        setLikedEchoesRefreshTrigger(prev => prev + 1);
-      } else {
-        toast.error("Could not confirm like status change.");
-      }
-
-    } catch (error: any) {
-      console.error("Error in handleLikeToggle:", error);
-      toast.error(`An error occurred: ${error.message}`);
-    } finally {
-      setIsLiking(false);
-    }
-  };
 
   const handleUnlikeFromLikedList = (echoId: string) => {
     // If the currently caught echo was unliked from the liked list, update its state
@@ -348,29 +308,39 @@ function App() {
                                 {caughtEcho.content}
                               </p>
                             </div>
-                            <div className="flex items-center justify-between pt-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleLikeToggle(caughtEcho.id)}
-                                disabled={isLiking || !user}
-                                className="group flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-200"
-                              >
-                                <Heart 
-                                  className={`w-5 h-5 transition-all duration-200 ${
-                                    caughtEcho.is_liked_by_user 
-                                      ? 'fill-red-500 text-red-500' 
-                                      : 'text-gray-400 group-hover:text-red-400'
-                                  }`}
-                                />
-                                <span className={`text-sm font-medium ${
-                                  caughtEcho.is_liked_by_user ? 'text-red-400' : 'text-gray-400'
-                                }`}>
-                                  {caughtEcho.likes_count} {caughtEcho.likes_count === 1 ? 'Like' : 'Likes'}
-                                </span>
-                              </Button>
-                              <div className="text-xs text-gray-500">
-                                Echo #{caughtEcho.id.slice(0, 8)}
+                            <div className="space-y-4">
+                              <EchoReactions
+                                echoId={caughtEcho.id}
+                                userId={user?.id || ''}
+                                reactions={{
+                                  like_count: caughtEcho.like_count,
+                                  love_count: caughtEcho.love_count,
+                                  laugh_count: caughtEcho.laugh_count,
+                                  think_count: caughtEcho.think_count,
+                                  sad_count: caughtEcho.sad_count,
+                                  fire_count: caughtEcho.fire_count,
+                                }}
+                                userReactions={{
+                                  user_like_reaction: caughtEcho.user_like_reaction,
+                                  user_love_reaction: caughtEcho.user_love_reaction,
+                                  user_laugh_reaction: caughtEcho.user_laugh_reaction,
+                                  user_think_reaction: caughtEcho.user_think_reaction,
+                                  user_sad_reaction: caughtEcho.user_sad_reaction,
+                                  user_fire_reaction: caughtEcho.user_fire_reaction,
+                                }}
+                                onReactionChange={() => {
+                                  // Refresh the echo data after reaction change
+                                  setLikedEchoesRefreshTrigger(prev => prev + 1);
+                                  // Optionally re-fetch the current echo to update counts
+                                }}
+                              />
+                              <div className="flex justify-between items-center pt-2">
+                                <div className="text-sm text-gray-400">
+                                  {caughtEcho.total_reactions} total reactions
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Echo #{caughtEcho.id.slice(0, 8)}
+                                </div>
                               </div>
                             </div>
                           </CardContent>
@@ -391,7 +361,7 @@ function App() {
                     <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
                       <Heart className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-lg font-semibold text-white">Recently Liked</h3>
+                    <h3 className="text-lg font-semibold text-white">Recent Reactions</h3>
                   </div>
                   <div className="flex-1 overflow-hidden min-h-0">
                     <LikedEchoes 

@@ -160,5 +160,18 @@
   .text-gradient-pink-cyan {
     @apply bg-gradient-to-r from-[var(--gradient-from-pink)] to-[var(--gradient-to-cyan)] bg-clip-text text-transparent;
   }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
 }
 
