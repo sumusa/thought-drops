@@ -14,14 +14,27 @@ import { useState } from "react";
 import { toast } from "sonner"; // Corrected import for toast
 import { Send } from 'lucide-react'; // Import Send icon
 
+const MAX_ECHO_LENGTH = 300;
+
 export function EchoSubmitForm() {
   const [echoText, setEchoText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const currentLength = echoText.length;
+  const isOverLimit = currentLength > MAX_ECHO_LENGTH;
+
+  const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEchoText(event.target.value);
+  };
+
   const handleSubmit = async () => {
     if (!echoText.trim()) {
-      toast.warning("Please write something before submitting."); // Changed from alert
+      toast.warning("Please write something before submitting.");
+      return;
+    }
+    if (isOverLimit) {
+      toast.error(`Your echo is too long. Please keep it under ${MAX_ECHO_LENGTH} characters.`);
       return;
     }
     setIsLoading(true);
@@ -55,21 +68,25 @@ export function EchoSubmitForm() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      // Reset text if dialog is closed without submitting
       if (!open) {
-        setEchoText("");
+        setEchoText(""); // Clear text when dialog is closed
       }
       setIsOpen(open);
     }}>
       <DialogTrigger asChild>
-        <Button variant="outline">Drop an Echo</Button>
+        <Button 
+          variant="outline"
+          className="bg-dark-accent hover:bg-cyan-500 text-dark-bg font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-2"
+        >
+            <Send className="w-4 h-4 mr-2" /> 
+            Drop an Echo
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-[#1F2937] border-dark-border text-dark-text-primary shadow-2xl">
         <DialogHeader>
-          <DialogTitle>Share a Thought</DialogTitle>
-          <DialogDescription>
-            What's on your mind? It will be released anonymously after a short
-            delay.
+          <DialogTitle className="text-dark-text-primary">Share a Thought</DialogTitle>
+          <DialogDescription className="text-dark-text-subtle">
+            What's on your mind? Keep it under {MAX_ECHO_LENGTH} characters.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -77,17 +94,21 @@ export function EchoSubmitForm() {
             id="echoText"
             placeholder="Type your message here..."
             value={echoText}
-            onChange={(e) => setEchoText(e.target.value)}
+            onChange={handleTextChange}
             rows={4}
             disabled={isLoading}
+            className={`bg-dark-bg border-dark-border text-dark-text-primary focus:ring-dark-accent placeholder:text-dark-text-subtle ${isOverLimit ? 'border-red-500 focus:ring-red-500' : ''}`}
           />
+          <div className={`text-sm text-right ${isOverLimit ? 'text-red-400' : 'text-dark-text-subtle'}`}>
+            {currentLength}/{MAX_ECHO_LENGTH}
+          </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="mt-2">
           <Button 
             type="button" 
             onClick={handleSubmit} 
-            disabled={isLoading}
-            className="bg-calm-accent hover:bg-teal-500 text-white dark:text-calm-bg font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-2"
+            disabled={isLoading || isOverLimit}
+            className={`${isOverLimit ? 'bg-gray-500' : 'bg-dark-accent hover:bg-cyan-500'} text-dark-bg font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-2`}
           >
             <Send className="w-4 h-4" />
             <span>

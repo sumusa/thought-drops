@@ -13,8 +13,9 @@ import { useState, useEffect } from 'react'
 // import { User } from '@supabase/supabase-js'; // Temporarily commented out due to import issues
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
-import { Heart, Sparkles, Wind, MessageSquareQuote } from 'lucide-react'; // Import Heart, Sparkles, and Wind icons, and MessageSquareQuote
-import { EmptyEchoState } from '@/components/custom/EmptyEchoState'; // Import new component
+import { Heart, Sparkles, Wind, MessageSquareQuote, Loader2 } from 'lucide-react'; // Import Heart, Sparkles, and Wind icons, and MessageSquareQuote and Loader2
+import { EmptyEchoState, type NoEchoReason } from '@/components/custom/EmptyEchoState'; // Import NoEchoReason from EmptyEchoState
+import { LikedEchoes } from '@/components/custom/LikedEchoes';
 
 interface Echo {
   id: string;
@@ -30,7 +31,7 @@ function App() {
   const [caughtEcho, setCaughtEcho] = useState<Echo | null>(null);
   const [isCatching, setIsCatching] = useState(false);
   const [isLiking, setIsLiking] = useState(false); // For disabling like button during RPC call
-  const [hasAttemptedCatch, setHasAttemptedCatch] = useState(false); // New state
+  const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -81,7 +82,7 @@ function App() {
     }
     setIsCatching(true);
     setCaughtEcho(null);
-    setHasAttemptedCatch(false); // Reset before new attempt
+    setNoEchoReason('loading'); // Set reason to loading
 
     try {
       // Call the Supabase database function
@@ -97,7 +98,7 @@ function App() {
         // not an rpcError. So, if rpcError exists, it's likely a genuine problem.
         console.error("Error calling get_random_unseen_echo:", rpcError);
         toast.error(`Failed to fetch an echo: ${rpcError.message}. Please try again.`);
-        // No need to set isCatching(false) here, it's handled in the finally block or after try-catch
+        setNoEchoReason('error');
         return; 
       }
 
@@ -106,6 +107,7 @@ function App() {
         const actualEcho: Echo = rpcData[0]; // Get the first (and only) echo from the array
         
         setCaughtEcho(actualEcho);
+        setNoEchoReason(null); // Successfully caught an echo
 
         // Mark this echo as seen for the current user
         const { error: insertSeenError } = await supabase
@@ -119,17 +121,32 @@ function App() {
         }
       } else {
         // This case handles rpcData being null, undefined, or an empty array (no new echoes).
+        // We can't easily distinguish "no echoes at all" vs "user has seen all" with the current RPC.
+        // So we use a generic "no_new_echoes" or check if any echoes exist at all.
+        // For a more precise "all_seen" message, we might need another query or RPC modification.
+        
+        const { count, error: countError } = await supabase
+            .from('echoes')
+            .select('*', { count: 'exact', head: true });
+
+        if (countError) {
+            console.error("Error counting total echoes:", countError);
+            setNoEchoReason('no_new_echoes'); // Fallback
+        } else if (count === 0) {
+            setNoEchoReason('no_new_echoes'); // No echoes in the system at all
+        } else {
+            setNoEchoReason('all_seen'); // Echoes exist, but user has seen them all
+        }
+        
         toast.info("No new echoes available to catch right now. Try again later or submit one!");
-        // No echo caught, setCaughtEcho(null) is already done
       }
     } catch (error: any) {
       console.error("Error in handleCatchEcho:", error);
       toast.error(`An error occurred: ${error.message}. Please try again.`);
-      // Ensure caughtEcho remains null on error
+      setNoEchoReason('error');
       setCaughtEcho(null);
     } finally {
       setIsCatching(false);
-      setHasAttemptedCatch(true); // Mark that an attempt was made
     }
   };
 
@@ -177,6 +194,17 @@ function App() {
     }
   };
 
+  const handleUnlikeFromLikedList = (echoId: string) => {
+    // If the currently caught echo was unliked from the liked list, update its state
+    if (caughtEcho && caughtEcho.id === echoId) {
+      setCaughtEcho(prev => prev ? {
+        ...prev,
+        is_liked_by_user: false,
+        likes_count: Math.max(0, prev.likes_count - 1)
+      } : null);
+    }
+  };
+
   if (authLoading) {
     return (
       <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
@@ -187,80 +215,121 @@ function App() {
   }
 
   return (
-    <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4 bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       <Toaster richColors closeButton />
-      <div className="w-full max-w-md">
-        <header 
-          className="text-center mb-12 p-6 bg-dark-surface rounded-xl shadow-md border border-dark-border"
-        >
-          {user && <p className="text-xs text-dark-text-subtle mb-2">User ID: {user.id}</p>}
+      
+      {/* Header spanning full width */}
+      <header className="w-full bg-dark-surface border-b border-dark-border shadow-sm">
+        <div className="container mx-auto px-6 py-6">
+          {user && <p className="text-xs text-dark-text-subtle mb-3">User ID: {user.id}</p>}
           <div className="flex items-center justify-center">
             <Sparkles className="w-8 h-8 text-dark-accent mr-3" />
             <h1 className="text-4xl font-bold tracking-tight text-gradient-pink-cyan sm:text-5xl">
               Ephemeral Echoes
             </h1>
           </div>
-          <p className="mt-3 text-lg text-dark-text-subtle sm:mt-4">
+          <p className="mt-3 text-lg text-dark-text-subtle text-center sm:mt-4">
             Drop a thought. Catch a whisper.
           </p>
-        </header>
-        
-        <section className="flex justify-center mb-12">
-          <EchoSubmitForm />
-        </section>
+        </div>
+      </header>
 
-        <section className="flex flex-col items-center mb-12">
-          <h2 className="text-3xl font-semibold mb-6 text-dark-text-primary">Discover an Echo</h2>
-          <Button 
-            onClick={handleCatchEcho} 
-            disabled={isCatching || !user} 
-            size="lg"
-            className="bg-dark-accent hover:bg-cyan-500 text-dark-bg font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-2"
-          >
-            <Wind className="w-5 h-5" />
-            <span>
-              {isCatching ? "Searching..." : "Catch an Echo"}
-            </span>
-          </Button>
+      {/* Main content area with sidebar layout */}
+      <div className="container mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[calc(100vh-200px)]">
+          
+          {/* Main content area - takes up 2/3 on large screens */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Echo submission section */}
+            <section className="flex justify-center">
+              <EchoSubmitForm />
+            </section>
 
-          {caughtEcho && (
-            <Card className="mt-8 text-left animate-fadeIn rounded-xl shadow-lg bg-dark-surface border-dark-border">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-dark-text-primary">An Echo Resonates...</CardTitle>
-                  <CardDescription className="text-dark-text-subtle">A previously unseen thought, just for you.</CardDescription>
+            {/* Discover echoes section */}
+            <section className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-3xl font-semibold text-dark-text-primary mb-2">Discover an Echo</h2>
+                <p className="text-dark-text-subtle">Find thoughts from other anonymous minds</p>
+              </div>
+              
+              <div className="flex justify-center">
+                <Button 
+                  onClick={handleCatchEcho} 
+                  disabled={isCatching || !user} 
+                  size="lg"
+                  className="bg-dark-accent hover:bg-cyan-500 text-dark-bg font-semibold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-3 min-w-[220px] justify-center"
+                >
+                  {isCatching ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Wind className="w-6 h-6" />
+                  )}
+                  <span className="text-lg">
+                    {isCatching ? "Searching..." : "Catch an Echo"}
+                  </span>
+                </Button>
+              </div>
+
+              {/* Conditional rendering for EmptyEchoState or caughtEcho */}
+              {!isCatching && !caughtEcho && noEchoReason !== 'loading' && noEchoReason !== null && noEchoReason !== 'initial' && (
+                <div className="flex justify-center">
+                  <div className="w-full max-w-2xl">
+                    <EmptyEchoState reason={noEchoReason} />
+                  </div>
                 </div>
-                <MessageSquareQuote className="w-8 h-8 text-dark-text-subtle opacity-50" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg leading-relaxed whitespace-pre-wrap text-dark-text-primary">
-                  {caughtEcho.content}
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleLikeToggle(caughtEcho.id)}
-                    disabled={isLiking || !user}
-                    className="flex items-center space-x-1.5 group text-dark-text-subtle"
-                  >
-                    <Heart 
-                      className={`w-5 h-5 group-hover:fill-red-500 group-hover:text-red-500 transition-colors ${caughtEcho.is_liked_by_user ? 'fill-red-500 text-red-500' : ''}`}
-                    />
-                    <span className={`text-sm font-medium ${caughtEcho.is_liked_by_user ? 'text-red-400' : ''}`}>
-                      {caughtEcho.likes_count} {caughtEcho.likes_count === 1 ? 'Like' : 'Likes'}
-                    </span>
-                  </Button>
+              )}
+
+              {caughtEcho && (
+                <div className="flex justify-center">
+                  <Card className="w-full max-w-2xl text-left animate-fadeIn rounded-xl shadow-lg bg-dark-surface border-dark-border">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-dark-text-primary text-xl">An Echo Resonates...</CardTitle>
+                        <CardDescription className="text-dark-text-subtle">A previously unseen thought, just for you.</CardDescription>
+                      </div>
+                      <MessageSquareQuote className="w-8 h-8 text-dark-text-subtle opacity-50" />
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-lg leading-relaxed whitespace-pre-wrap text-dark-text-primary mb-6">
+                        {caughtEcho.content}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleLikeToggle(caughtEcho.id)}
+                          disabled={isLiking || !user}
+                          className="flex items-center space-x-2 group text-dark-text-subtle hover:text-red-400"
+                        >
+                          <Heart 
+                            className={`w-5 h-5 group-hover:fill-red-500 group-hover:text-red-500 transition-colors ${caughtEcho.is_liked_by_user ? 'fill-red-500 text-red-500' : ''}`}
+                          />
+                          <span className={`text-sm font-medium ${caughtEcho.is_liked_by_user ? 'text-red-400' : ''}`}>
+                            {caughtEcho.likes_count} {caughtEcho.likes_count === 1 ? 'Like' : 'Likes'}
+                          </span>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </section>
+          </div>
 
-          {!isCatching && !caughtEcho && hasAttemptedCatch && (
-            <EmptyEchoState />
-          )}
-
-        </section>
+          {/* Sidebar for liked echoes - takes up 1/3 on large screens */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <div className="bg-dark-surface rounded-xl border border-dark-border p-6 shadow-lg">
+                <div className="flex items-center space-x-2 mb-6">
+                  <Heart className="w-6 h-6 text-dark-accent" />
+                  <h3 className="text-xl font-semibold text-dark-text-primary">Your Liked Echoes</h3>
+                </div>
+                <LikedEchoes user={user} onUnlike={handleUnlikeFromLikedList} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   )
