@@ -17,9 +17,11 @@ import { Heart, Sparkles, Wind, MessageSquareQuote, Loader2 } from 'lucide-react
 import { EmptyEchoState, type NoEchoReason } from '@/components/custom/EmptyEchoState'; // Import NoEchoReason from EmptyEchoState
 import { LikedEchoes } from '@/components/custom/LikedEchoes';
 import { EchoReactions } from '@/components/EchoReactions';
+import { MoodSelector } from '@/components/MoodSelector';
 import type { EchoWithReactions } from '@/types/reactions';
+import type { EchoMood, EchoWithMood } from '@/types/moods';
 
-interface Echo extends EchoWithReactions {
+interface Echo extends EchoWithReactions, EchoWithMood {
   // Legacy compatibility - keeping old interface for now
   likes_count: number;
   is_liked_by_user: boolean;
@@ -31,8 +33,8 @@ function App() {
 
   const [caughtEcho, setCaughtEcho] = useState<Echo | null>(null);
   const [isCatching, setIsCatching] = useState(false);
-  const [] = useState(false); // For disabling like button during RPC call
   const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
+  const [selectedMoodFilter, setSelectedMoodFilter] = useState<EchoMood | null>(null);
 
   // Add ref to trigger liked echoes refresh
   const [likedEchoesRefreshTrigger, setLikedEchoesRefreshTrigger] = useState(0);
@@ -93,7 +95,10 @@ function App() {
       // It returns an array of objects with reaction data
       const { data: rpcData, error: rpcError } = await supabase.rpc(
         'get_random_unseen_echo_with_reactions',
-        { p_user_id: user.id }
+        { 
+          p_user_id: user.id,
+          p_mood_filter: selectedMoodFilter?.id || null
+        }
       );
 
       if (rpcError) {
@@ -181,6 +186,7 @@ function App() {
         .select(`
           id,
           content,
+          mood_id,
           like_count,
           love_count,
           laugh_count,
@@ -219,6 +225,11 @@ function App() {
         user_think_reaction: reactionTypes.includes('think'),
         user_sad_reaction: reactionTypes.includes('sad'),
         user_fire_reaction: reactionTypes.includes('fire'),
+        // Mood properties (will be null if no mood)
+        mood_id: echoData.mood_id,
+        mood_name: null,
+        mood_emoji: null,
+        mood_color: null,
         // Legacy compatibility
         likes_count: echoData.like_count,
         is_liked_by_user: reactionTypes.includes('like')
@@ -240,11 +251,11 @@ function App() {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       <Toaster richColors closeButton />
       
       {/* Modern Header with gradient background */}
-      <header className="relative overflow-hidden flex-shrink-0">
+      <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10"></div>
         <div className="relative backdrop-blur-sm bg-black/20 border-b border-white/10">
           <div className="container mx-auto px-6 py-6">
@@ -273,23 +284,23 @@ function App() {
         </div>
       </header>
 
-      {/* Main content area with fixed height and no scrolling */}
-      <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-6 py-8 h-full">
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-full">
-            
-            {/* Main content area - takes up 3/4 on xl screens */}
-            <div className="xl:col-span-3 flex flex-col space-y-12 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent">
+      {/* Main content area with proper scrolling */}
+      <div className="container mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          
+          {/* Main content area - takes up 3/4 on xl screens */}
+          <div className="xl:col-span-3">
+            <div className="space-y-12 pb-8">
               
               {/* Echo submission section with card design */}
-              <section className="flex justify-center flex-shrink-0">
+              <section className="flex justify-center">
                 <div className="w-full max-w-md">
                   <EchoSubmitForm />
                 </div>
               </section>
 
               {/* Discover echoes section with enhanced design */}
-              <section className="space-y-8 flex-shrink-0">
+              <section className="space-y-8">
                 <div className="text-center space-y-6">
                   {/* Section header - not button-like */}
                   <div className="space-y-3">
@@ -303,6 +314,15 @@ function App() {
                       Catch whispers from anonymous minds across the void
                     </p>
                     <div className="w-24 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent mx-auto"></div>
+                  </div>
+
+                  {/* Mood Filter */}
+                  <div className="max-w-2xl mx-auto">
+                    <MoodSelector
+                      selectedMood={selectedMoodFilter}
+                      onMoodSelect={setSelectedMoodFilter}
+                      variant="filter"
+                    />
                   </div>
                 </div>
                 
@@ -351,9 +371,20 @@ function App() {
                                   <CardTitle className="text-white text-xl font-semibold">
                                     An Echo Resonates
                                   </CardTitle>
+                                  {caughtEcho.mood_emoji && (
+                                    <span className="text-lg" title={caughtEcho.mood_name || 'Unknown mood'}>
+                                      {caughtEcho.mood_emoji}
+                                    </span>
+                                  )}
                                 </div>
                                 <CardDescription className="text-gray-400">
-                                  A whisper from the digital ether, meant for you
+                                  {caughtEcho.mood_name ? (
+                                    <span>
+                                      A <span className={`capitalize ${caughtEcho.mood_color}`}>{caughtEcho.mood_name}</span> whisper from the digital ether
+                                    </span>
+                                  ) : (
+                                    "A whisper from the digital ether, meant for you"
+                                  )}
                                 </CardDescription>
                               </div>
                               <div className="p-2 bg-white/5 rounded-lg">
@@ -411,26 +442,26 @@ function App() {
                   </div>
                 )}
               </section>
+              </div>
             </div>
 
-            {/* Enhanced sidebar for liked echoes - reduced height */}
-            <div className="xl:col-span-1 flex flex-col">
-              <div className="relative group max-h-[600px] flex flex-col">
-                <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
-                <div className="relative bg-slate-800/90 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-6 shadow-xl flex flex-col h-full">
-                  <div className="flex items-center space-x-3 mb-6 flex-shrink-0">
-                    <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
-                      <Heart className="w-5 h-5 text-white" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white">Recent Reactions</h3>
+          {/* Enhanced sidebar for liked echoes - responsive height */}
+          <div className="xl:col-span-1 flex flex-col">
+            <div className="relative group h-fit max-h-[calc(100vh-12rem)] flex flex-col">
+              <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+              <div className="relative bg-slate-800/90 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-6 shadow-xl flex flex-col h-full">
+                <div className="flex items-center space-x-3 mb-6 flex-shrink-0">
+                  <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
+                    <Heart className="w-5 h-5 text-white" />
                   </div>
-                  <div className="flex-1 overflow-hidden min-h-0">
-                    <LikedEchoes 
-                      user={user} 
-                      onUnlike={handleUnlikeFromLikedList}
-                      refreshTrigger={likedEchoesRefreshTrigger}
-                    />
-                  </div>
+                  <h3 className="text-lg font-semibold text-white">Recent Reactions</h3>
+                </div>
+                <div className="flex-1 overflow-hidden min-h-0">
+                  <LikedEchoes 
+                    user={user} 
+                    onUnlike={handleUnlikeFromLikedList}
+                    refreshTrigger={likedEchoesRefreshTrigger}
+                  />
                 </div>
               </div>
             </div>

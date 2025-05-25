@@ -13,11 +13,14 @@ import { supabase } from "@/lib/supabaseClient";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Send, Sparkles, Loader2 } from 'lucide-react';
+import { MoodSelector } from '@/components/MoodSelector';
+import type { EchoMood } from '@/types/moods';
 
 const MAX_ECHO_LENGTH = 300;
 
 export function EchoSubmitForm() {
   const [echoText, setEchoText] = useState("");
+  const [selectedMood, setSelectedMood] = useState<EchoMood | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,6 +45,7 @@ export function EchoSubmitForm() {
     const { data, error } = await supabase.from("echoes").insert([
       {
         content: echoText,
+        mood_id: selectedMood?.id || null,
       },
     ]);
 
@@ -54,6 +58,7 @@ export function EchoSubmitForm() {
       console.log("Echo submitted successfully:", data);
       toast.success("Your echo has been cast into the void!");
       setEchoText("");
+      setSelectedMood(null);
       setIsOpen(false);
     }
   };
@@ -62,6 +67,7 @@ export function EchoSubmitForm() {
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
         setEchoText("");
+        setSelectedMood(null);
       }
       setIsOpen(open);
     }}>
@@ -127,6 +133,15 @@ export function EchoSubmitForm() {
                   {currentLength}/{MAX_ECHO_LENGTH}
                 </div>
               </div>
+            </div>
+
+            {/* Mood Selector */}
+            <div className="space-y-3">
+              <MoodSelector
+                selectedMood={selectedMood}
+                onMoodSelect={setSelectedMood}
+                variant="submit"
+              />
             </div>
             
             {isOverLimit && (
