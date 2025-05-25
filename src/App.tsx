@@ -11,6 +11,8 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { useState, useEffect } from 'react'
 // import { User } from '@supabase/supabase-js'; // Temporarily commented out due to import issues
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 
 interface Echo {
   id: string;
@@ -23,7 +25,6 @@ function App() {
 
   const [caughtEcho, setCaughtEcho] = useState<Echo | null>(null);
   const [isCatching, setIsCatching] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setAuthLoading(true);
@@ -34,7 +35,7 @@ function App() {
         const { data: anonSession, error: anonError } = await supabase.auth.signInAnonymously();
         if (anonError) {
           console.error("Error signing in anonymously:", anonError);
-          setFeedbackMessage("Could not start an anonymous session. Please try refreshing.");
+          toast.error("Could not start an anonymous session. Please try refreshing.");
         } else {
           setUser(anonSession?.user ?? null);
           console.log("Signed in anonymously:", anonSession?.user);
@@ -61,80 +62,63 @@ function App() {
   }, []);
 
   const handleCatchEcho = async () => {
-    if (!user || !user.id) { // Ensure user and user.id exist
-        setFeedbackMessage("Authenticating... Please try again in a moment.");
+    if (!user || !user.id) {
+        toast.info("Authenticating... Please try again in a moment.");
         return;
     }
     setIsCatching(true);
     setCaughtEcho(null);
-    setFeedbackMessage(null);
 
     try {
-      // Step 1: Get IDs of echoes already seen by the current user
-      const { data: seenEchosData, error: seenError } = await supabase
-        .from('seen_echoes')
-        .select('echo_id')
-        .eq('user_id', user.id);
+      // Call the Supabase database function
+      // It returns an array of objects: { data: [{id, content}], error }
+      // or { data: [], error } if no rows are found.
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        'get_random_unseen_echo',
+        { p_user_id: user.id }
+      );
 
-      if (seenError) {
-        console.error("Error fetching seen echoes:", seenError);
-        throw seenError;
+      if (rpcError) {
+        // For a function that RETURNS TABLE, an empty result is typically an empty array in `data`,
+        // not an rpcError. So, if rpcError exists, it's likely a genuine problem.
+        console.error("Error calling get_random_unseen_echo:", rpcError);
+        toast.error(`Failed to fetch an echo: ${rpcError.message}. Please try again.`);
+        // No need to set isCatching(false) here, it's handled in the finally block or after try-catch
+        return; 
       }
 
-      const seenEchoIds = seenEchosData ? seenEchosData.map(s => s.echo_id) : [];
+      // rpcData should be an array. It could be empty if no unseen echoes are found.
+      if (rpcData && rpcData.length > 0) {
+        const actualEcho: Echo = rpcData[0]; // Get the first (and only) echo from the array
+        
+        setCaughtEcho(actualEcho);
 
-      // Step 2: Fetch a batch of echoes not in the seen list
-      let query = supabase
-        .from('echoes')
-        .select('id, content');
-
-      if (seenEchoIds.length > 0) {
-        // Correct syntax for .not() with an array of values for 'in' clause
-        query = query.not('id', 'in', `(${seenEchoIds.join(',')})`);
-      }
-      
-      // Fetch a limited number of the oldest unseen echoes.
-      // For better randomness from a larger pool, a database function is preferred.
-      query = query.order('created_at', { ascending: true }).limit(10);
-
-      const { data: unseenEchos, error: fetchError } = await query;
-
-      if (fetchError) {
-        console.error("Error fetching unseen echoes:", fetchError);
-        throw fetchError;
-      }
-
-      if (unseenEchos && unseenEchos.length > 0) {
-        // Pick one randomly from the fetched batch
-        const randomEcho = unseenEchos[Math.floor(Math.random() * unseenEchos.length)];
-
-        // Step 3: Mark this echo as seen for the current user
+        // Mark this echo as seen for the current user
         const { error: insertSeenError } = await supabase
           .from('seen_echoes')
-          .insert({ user_id: user.id, echo_id: randomEcho.id });
+          .insert({ user_id: user.id, echo_id: actualEcho.id }); // Use actualEcho.id
 
         if (insertSeenError) {
           console.error("Error marking echo as seen:", insertSeenError);
-          setFeedbackMessage("Could not save this echo as seen. You might see it again, or try catching another.");
-          // Decide if we should still show the echo or not. For now, let's show it.
+          toast.warning(`Could not save this echo as seen: ${insertSeenError.message}. You might see it again.`);
+          // Echo is already displayed, so user sees it. The warning is for future catches.
         }
-        
-        setCaughtEcho(randomEcho);
-
       } else {
-        setFeedbackMessage("No new echoes available to catch right now. Try again later or submit one!");
+        // This case handles rpcData being null, undefined, or an empty array (no new echoes).
+        toast.info("No new echoes available to catch right now. Try again later or submit one!");
       }
-    } catch (error: any) {
+    } catch (error: any) { // Catches errors from the try block, including re-thrown rpcError if logic changes
       console.error("Error in handleCatchEcho:", error);
-      setFeedbackMessage(`An error occurred: ${error.message}. Please try again.`);
+      toast.error(`An error occurred: ${error.message}. Please try again.`);
+    } finally {
+      setIsCatching(false); // Ensure this is always called
     }
-
-    setIsCatching(false);
   };
 
   if (authLoading) {
     return (
       <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
+        <Toaster richColors closeButton />
         <p className="text-lg">Initializing session...</p>
       </main>
     );
@@ -142,6 +126,7 @@ function App() {
 
   return (
     <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
+      <Toaster richColors closeButton />
       <div className="w-full max-w-md">
         <header className="text-center mb-8">
           {user && <p className="text-xs text-gray-500">User ID: {user.id}</p>}
@@ -173,12 +158,6 @@ function App() {
                 <p className="text-lg leading-relaxed whitespace-pre-wrap">{caughtEcho.content}</p>
               </CardContent>
             </Card>
-          )}
-
-          {feedbackMessage && !caughtEcho && (
-            <p className="mt-6 text-lg text-gray-500 dark:text-gray-400 animate-fadeIn">
-              {feedbackMessage}
-            </p>
           )}
         </section>
       </div>

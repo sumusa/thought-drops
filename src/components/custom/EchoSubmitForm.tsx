@@ -11,6 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabaseClient"; // Adjusted import path
 import { useState } from "react";
+import { toast } from "sonner"; // Corrected import for toast
 
 export function EchoSubmitForm() {
   const [echoText, setEchoText] = useState("");
@@ -19,24 +20,22 @@ export function EchoSubmitForm() {
 
   const handleSubmit = async () => {
     if (!echoText.trim()) {
-      alert("Please write something before submitting.");
+      toast.warning("Please write something before submitting."); // Changed from alert
       return;
     }
-
     setIsLoading(true);
 
-    const currentTime = new Date();
-    // Random delay between 1 and 24 hours
-    const randomHours = Math.floor(Math.random() * 24) + 1;
-    const revealAtTime = new Date(
-      currentTime.getTime() + randomHours * 60 * 60 * 1000
-    );
+    // Removed revealAtTime logic as it's no longer in the schema
+    // const currentTime = new Date();
+    // const randomHours = Math.floor(Math.random() * 24) + 1;
+    // const revealAtTime = new Date(
+    //   currentTime.getTime() + randomHours * 60 * 60 * 1000
+    // );
 
     const { data, error } = await supabase.from("echoes").insert([
       {
         content: echoText,
-        reveal_at: revealAtTime.toISOString(), // Supabase expects ISO string for timestamps
-        // is_claimed and likes_count will use their default values
+        // reveal_at: revealAtTime.toISOString(), // Removed
       },
     ]);
 
@@ -44,10 +43,10 @@ export function EchoSubmitForm() {
 
     if (error) {
       console.error("Error submitting echo:", error);
-      alert(`Failed to submit echo: ${error.message}`);
+      toast.error(`Failed to submit echo: ${error.message}`); // Changed from alert
     } else {
       console.log("Echo submitted successfully:", data);
-      alert("Your echo has been submitted and will be revealed later!");
+      toast.success("Your echo has been submitted!"); // Changed from alert
       setEchoText(""); // Clear textarea
       setIsOpen(false); // Close dialog
     }
