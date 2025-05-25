@@ -33,6 +33,9 @@ function App() {
   const [isLiking, setIsLiking] = useState(false); // For disabling like button during RPC call
   const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
 
+  // Add ref to trigger liked echoes refresh
+  const [likedEchoesRefreshTrigger, setLikedEchoesRefreshTrigger] = useState(0);
+
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -182,6 +185,9 @@ function App() {
           };
         });
         toast.success(is_liked ? "Echo liked!" : "Like removed.");
+        
+        // Trigger refresh of liked echoes sidebar
+        setLikedEchoesRefreshTrigger(prev => prev + 1);
       } else {
         toast.error("Could not confirm like status change.");
       }
@@ -215,117 +221,186 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       <Toaster richColors closeButton />
       
-      {/* Header spanning full width */}
-      <header className="w-full bg-dark-surface border-b border-dark-border shadow-sm">
-        <div className="container mx-auto px-6 py-6">
-          {user && <p className="text-xs text-dark-text-subtle mb-3">User ID: {user.id}</p>}
-          <div className="flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-dark-accent mr-3" />
-            <h1 className="text-4xl font-bold tracking-tight text-gradient-pink-cyan sm:text-5xl">
-              Ephemeral Echoes
-            </h1>
+      {/* Modern Header with gradient background */}
+      <header className="relative overflow-hidden flex-shrink-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10"></div>
+        <div className="relative backdrop-blur-sm bg-black/20 border-b border-white/10">
+          <div className="container mx-auto px-6 py-6">
+            {user && (
+              <div className="flex justify-end mb-3">
+                <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                  <p className="text-xs text-gray-300">Session: {user.id.slice(0, 8)}...</p>
+                </div>
+              </div>
+            )}
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-3">
+                <div className="p-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-2xl shadow-lg">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
+                Ephemeral Echoes
+              </h1>
+              <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
+                Share anonymous thoughts that drift through the digital ether, 
+                waiting to be discovered by kindred spirits.
+              </p>
+            </div>
           </div>
-          <p className="mt-3 text-lg text-dark-text-subtle text-center sm:mt-4">
-            Drop a thought. Catch a whisper.
-          </p>
         </div>
       </header>
 
-      {/* Main content area with sidebar layout */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[calc(100vh-200px)]">
-          
-          {/* Main content area - takes up 2/3 on large screens */}
-          <div className="lg:col-span-2 space-y-8">
+      {/* Main content area with fixed height and no scrolling */}
+      <div className="flex-1 overflow-hidden">
+        <div className="container mx-auto px-6 py-8 h-full">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-full">
             
-            {/* Echo submission section */}
-            <section className="flex justify-center">
-              <EchoSubmitForm />
-            </section>
-
-            {/* Discover echoes section */}
-            <section className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-3xl font-semibold text-dark-text-primary mb-2">Discover an Echo</h2>
-                <p className="text-dark-text-subtle">Find thoughts from other anonymous minds</p>
-              </div>
+            {/* Main content area - takes up 3/4 on xl screens */}
+            <div className="xl:col-span-3 flex flex-col space-y-12 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent">
               
-              <div className="flex justify-center">
-                <Button 
-                  onClick={handleCatchEcho} 
-                  disabled={isCatching || !user} 
-                  size="lg"
-                  className="bg-dark-accent hover:bg-cyan-500 text-dark-bg font-semibold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 flex items-center space-x-3 min-w-[220px] justify-center"
-                >
-                  {isCatching ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <Wind className="w-6 h-6" />
-                  )}
-                  <span className="text-lg">
-                    {isCatching ? "Searching..." : "Catch an Echo"}
-                  </span>
-                </Button>
-              </div>
+              {/* Echo submission section with card design */}
+              <section className="flex justify-center flex-shrink-0">
+                <div className="w-full max-w-md">
+                  <EchoSubmitForm />
+                </div>
+              </section>
 
-              {/* Conditional rendering for EmptyEchoState or caughtEcho */}
-              {!isCatching && !caughtEcho && noEchoReason !== 'loading' && noEchoReason !== null && noEchoReason !== 'initial' && (
-                <div className="flex justify-center">
-                  <div className="w-full max-w-2xl">
-                    <EmptyEchoState reason={noEchoReason} />
+              {/* Discover echoes section with enhanced design */}
+              <section className="space-y-8 flex-shrink-0">
+                <div className="text-center space-y-6">
+                  {/* Section header - not button-like */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center space-x-3 text-white">
+                        <Wind className="w-6 h-6 text-cyan-400" />
+                        <h2 className="text-3xl font-bold">Discover Echoes</h2>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-lg max-w-lg mx-auto">
+                      Catch whispers from anonymous minds across the void
+                    </p>
+                    <div className="w-24 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent mx-auto"></div>
                   </div>
                 </div>
-              )}
-
-              {caughtEcho && (
+                
                 <div className="flex justify-center">
-                  <Card className="w-full max-w-2xl text-left animate-fadeIn rounded-xl shadow-lg bg-dark-surface border-dark-border">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-dark-text-primary text-xl">An Echo Resonates...</CardTitle>
-                        <CardDescription className="text-dark-text-subtle">A previously unseen thought, just for you.</CardDescription>
-                      </div>
-                      <MessageSquareQuote className="w-8 h-8 text-dark-text-subtle opacity-50" />
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-lg leading-relaxed whitespace-pre-wrap text-dark-text-primary mb-6">
-                        {caughtEcho.content}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleLikeToggle(caughtEcho.id)}
-                          disabled={isLiking || !user}
-                          className="flex items-center space-x-2 group text-dark-text-subtle hover:text-red-400"
-                        >
-                          <Heart 
-                            className={`w-5 h-5 group-hover:fill-red-500 group-hover:text-red-500 transition-colors ${caughtEcho.is_liked_by_user ? 'fill-red-500 text-red-500' : ''}`}
-                          />
-                          <span className={`text-sm font-medium ${caughtEcho.is_liked_by_user ? 'text-red-400' : ''}`}>
-                            {caughtEcho.likes_count} {caughtEcho.likes_count === 1 ? 'Like' : 'Likes'}
-                          </span>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <Button 
+                    onClick={handleCatchEcho} 
+                    disabled={isCatching || !user} 
+                    size="lg"
+                    className="group relative overflow-hidden bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold py-6 px-12 rounded-2xl shadow-xl hover:shadow-2xl transform transition-all duration-300 ease-out hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    <div className="relative flex items-center space-x-3">
+                      {isCatching ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        <Wind className="w-6 h-6" />
+                      )}
+                      <span className="text-lg">
+                        {isCatching ? "Searching the void..." : "Catch an Echo"}
+                      </span>
+                    </div>
+                  </Button>
                 </div>
-              )}
-            </section>
-          </div>
 
-          {/* Sidebar for liked echoes - takes up 1/3 on large screens */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-8">
-              <div className="bg-dark-surface rounded-xl border border-dark-border p-6 shadow-lg">
-                <div className="flex items-center space-x-2 mb-6">
-                  <Heart className="w-6 h-6 text-dark-accent" />
-                  <h3 className="text-xl font-semibold text-dark-text-primary">Your Liked Echoes</h3>
+                {/* Enhanced empty state */}
+                {!isCatching && !caughtEcho && noEchoReason !== 'loading' && noEchoReason !== null && noEchoReason !== 'initial' && (
+                  <div className="flex justify-center">
+                    <div className="w-full max-w-2xl">
+                      <EmptyEchoState reason={noEchoReason} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Enhanced caught echo card */}
+                {caughtEcho && (
+                  <div className="flex justify-center">
+                    <div className="w-full max-w-2xl">
+                      <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
+                        <Card className="relative bg-slate-800/90 backdrop-blur-sm border-slate-700/50 rounded-2xl shadow-2xl">
+                          <CardHeader className="pb-4">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full animate-pulse"></div>
+                                  <CardTitle className="text-white text-xl font-semibold">
+                                    An Echo Resonates
+                                  </CardTitle>
+                                </div>
+                                <CardDescription className="text-gray-400">
+                                  A whisper from the digital ether, meant for you
+                                </CardDescription>
+                              </div>
+                              <div className="p-2 bg-white/5 rounded-lg">
+                                <MessageSquareQuote className="w-6 h-6 text-gray-400" />
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-6">
+                            <div className="p-6 bg-white/5 rounded-xl border border-white/10">
+                              <p className="text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
+                                {caughtEcho.content}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between pt-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleLikeToggle(caughtEcho.id)}
+                                disabled={isLiking || !user}
+                                className="group flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-200"
+                              >
+                                <Heart 
+                                  className={`w-5 h-5 transition-all duration-200 ${
+                                    caughtEcho.is_liked_by_user 
+                                      ? 'fill-red-500 text-red-500' 
+                                      : 'text-gray-400 group-hover:text-red-400'
+                                  }`}
+                                />
+                                <span className={`text-sm font-medium ${
+                                  caughtEcho.is_liked_by_user ? 'text-red-400' : 'text-gray-400'
+                                }`}>
+                                  {caughtEcho.likes_count} {caughtEcho.likes_count === 1 ? 'Like' : 'Likes'}
+                                </span>
+                              </Button>
+                              <div className="text-xs text-gray-500">
+                                Echo #{caughtEcho.id.slice(0, 8)}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* Enhanced sidebar for liked echoes - reduced height */}
+            <div className="xl:col-span-1 flex flex-col">
+              <div className="relative group max-h-[600px] flex flex-col">
+                <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+                <div className="relative bg-slate-800/90 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-6 shadow-xl flex flex-col h-full">
+                  <div className="flex items-center space-x-3 mb-6 flex-shrink-0">
+                    <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
+                      <Heart className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Recently Liked</h3>
+                  </div>
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <LikedEchoes 
+                      user={user} 
+                      onUnlike={handleUnlikeFromLikedList}
+                      refreshTrigger={likedEchoesRefreshTrigger}
+                    />
+                  </div>
                 </div>
-                <LikedEchoes user={user} onUnlike={handleUnlikeFromLikedList} />
               </div>
             </div>
           </div>

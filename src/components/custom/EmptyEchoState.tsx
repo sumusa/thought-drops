@@ -40,22 +40,52 @@ const EmptyEchoState = ({ reason }: EmptyEchoStateProps) => {
   }
 
   return (
-    <div className={`mt-8 flex flex-col items-center justify-center text-center p-6 border border-dashed border-dark-border rounded-xl bg-dark-surface/80 animate-fadeIn`}>
-      <svg 
-        width="80" 
-        height="60" 
-        viewBox="0 0 80 60" 
-        className={`text-dark-text-subtle mb-4 ${svgOpacity}`} 
-        fill="none" 
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Three soft, horizontal, rounded bars representing gentle waves/echoes */}
-        <rect x="10" y="15" width="60" height="6" rx="3" fill="currentColor" opacity="0.3" />
-        <rect x="20" y="25" width="40" height="6" rx="3" fill="currentColor" className="animate-pulse-opacity" style={{ opacity: 0.5 }} />
-        <rect x="15" y="35" width="50" height="6" rx="3" fill="currentColor" opacity="0.4" />
-      </svg>
-      <h3 className="text-xl font-semibold text-dark-text-primary mb-2" dangerouslySetInnerHTML={{ __html: title }} />
-      <p className="text-dark-text-subtle" dangerouslySetInnerHTML={{ __html: message }} />
+    <div className="relative group">
+      <div className="absolute -inset-1 bg-gradient-to-r from-slate-500/20 via-gray-500/20 to-slate-500/20 rounded-2xl blur opacity-50"></div>
+      <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-8 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-2xl blur"></div>
+            <div className="relative p-4 bg-slate-900/50 rounded-2xl border border-slate-600/30">
+              <svg 
+                width="60" 
+                height="45" 
+                viewBox="0 0 60 45" 
+                className={`text-gray-400 ${svgOpacity}`} 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect x="8" y="12" width="44" height="4" rx="2" fill="currentColor" opacity="0.3" />
+                <rect x="15" y="20" width="30" height="4" rx="2" fill="currentColor" className="animate-pulse-opacity" style={{ opacity: 0.5 }} />
+                <rect x="12" y="28" width="36" height="4" rx="2" fill="currentColor" opacity="0.4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <h3 className="text-xl font-semibold text-white">
+            {title}
+          </h3>
+          <p className="text-gray-400 leading-relaxed max-w-sm mx-auto" dangerouslySetInnerHTML={{ __html: message }} />
+        </div>
+        
+        {reason === 'all_seen' && (
+          <div className="mt-6 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+            <p className="text-sm text-cyan-400">
+              ✨ You've explored all available echoes! Check back later for new whispers.
+            </p>
+          </div>
+        )}
+        
+        {reason === 'no_new_echoes' && (
+          <div className="mt-6 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+            <p className="text-sm text-purple-400">
+              🌟 Be the first to cast an echo into the void!
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
