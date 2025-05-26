@@ -43,16 +43,27 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
     }
   }, [user?.id]);
 
-  const fetchUserHistory = async () => {
+  const fetchUserHistory = async (page = 1, append = false) => {
     if (!user?.id) return;
 
     try {
-      setIsLoading(true);
+      if (!append) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
 
-      // Fetch user's echo history
+      // Calculate offset for pagination
+      const offset = (page - 1) * ECHOES_PER_PAGE;
+
+      // Fetch user's echo history with pagination
       const { data: historyData, error: historyError } = await supabase.rpc(
-        'get_user_echo_history',
-        { p_user_id: user.id }
+        'get_user_echo_history_paginated',
+        { 
+          p_user_id: user.id,
+          p_limit: ECHOES_PER_PAGE,
+          p_offset: offset
+        }
       );
 
       if (historyError) {
@@ -61,25 +72,46 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
         return;
       }
 
-      // Fetch user's echo statistics
-      const { data: statsData, error: statsError } = await supabase.rpc(
-        'get_user_echo_stats',
-        { p_user_id: user.id }
-      );
+      // Fetch user's echo statistics (only on first load)
+      if (!append) {
+        const { data: statsData, error: statsError } = await supabase.rpc(
+          'get_user_echo_stats',
+          { p_user_id: user.id }
+        );
 
-      if (statsError) {
-        console.error('Error fetching echo stats:', statsError);
-        toast.error('Failed to load your echo statistics');
-        return;
+        if (statsError) {
+          console.error('Error fetching echo stats:', statsError);
+          toast.error('Failed to load your echo statistics');
+          return;
+        }
+
+        setUserStats(statsData?.[0] || null);
+        setTotalEchoes(statsData?.[0]?.total_echoes || 0);
       }
 
-      setUserEchoes(historyData || []);
-      setUserStats(statsData?.[0] || null);
+      const newEchoes = historyData || [];
+      
+      if (append) {
+        setUserEchoes(prev => [...prev, ...newEchoes]);
+      } else {
+        setUserEchoes(newEchoes);
+      }
+
+      // Check if there are more echoes to load
+      setHasMoreEchoes(newEchoes.length === ECHOES_PER_PAGE);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error in fetchUserHistory:', error);
       toast.error('An error occurred while loading your history');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreEchoes = () => {
+    if (!isLoadingMore && hasMoreEchoes) {
+      fetchUserHistory(currentPage + 1, true);
     }
   };
 
@@ -218,7 +250,7 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
             <div className="flex items-center space-x-3">
               <Sparkles className="w-6 h-6 text-cyan-400" />
               <h2 className="text-2xl font-bold text-white">Your Echo History</h2>
-              <div className="text-sm text-gray-400">({userEchoes.length} echoes)</div>
+              <div className="text-sm text-gray-400">({userEchoes.length} of {totalEchoes} echoes)</div>
             </div>
             {userEchoes.length > 0 && (
               <div className="flex-shrink-0">
@@ -317,7 +349,30 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
                     )}
                   </CardContent>
                 </Card>
-              ))}
+                              ))}
+              
+              {/* Load More Button */}
+              {hasMoreEchoes && (
+                <div className="flex justify-center pt-8">
+                  <Button
+                    onClick={loadMoreEchoes}
+                    disabled={isLoadingMore}
+                    className="bg-slate-700/50 hover:bg-slate-600/50 text-white border border-slate-600/50 hover:border-slate-500/50 px-8 py-3 rounded-xl transition-all duration-200"
+                  >
+                    {isLoadingMore ? (
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Loading more echoes...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Load More Echoes</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
