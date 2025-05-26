@@ -18,7 +18,12 @@ import type { EchoMood } from '@/types/moods';
 
 const MAX_ECHO_LENGTH = 300;
 
-export function EchoSubmitForm() {
+interface EchoSubmitFormProps {
+  onEchoSubmitted?: () => void;
+  compact?: boolean;
+}
+
+export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitFormProps = {}) {
   const [echoText, setEchoText] = useState("");
   const [selectedMood, setSelectedMood] = useState<EchoMood | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +65,11 @@ export function EchoSubmitForm() {
       setEchoText("");
       setSelectedMood(null);
       setIsOpen(false);
+      
+      // Call the callback if provided (for refreshing history page)
+      if (onEchoSubmitted) {
+        onEchoSubmitted();
+      }
     }
   };
 
@@ -72,22 +82,33 @@ export function EchoSubmitForm() {
       setIsOpen(open);
     }}>
       <DialogTrigger asChild>
-        <div className="relative group cursor-pointer">
-          <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-300"></div>
+        {compact ? (
           <Button 
-            className="relative w-full bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700/90 text-white border border-slate-600/50 font-semibold py-8 px-12 rounded-2xl shadow-xl transform transition-all duration-300 ease-out hover:scale-105 group min-w-[320px]"
+            className="relative bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transform transition-all duration-300 ease-out hover:scale-105 border border-cyan-500/30"
           >
-            <div className="flex items-center justify-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-semibold">Drop an Echo</div>
-                <div className="text-sm text-gray-300 opacity-80 mt-1">Share your thoughts anonymously</div>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm">Drop an Echo</span>
             </div>
           </Button>
-        </div>
+        ) : (
+          <div className="relative group cursor-pointer">
+            <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-300"></div>
+            <Button 
+              className="relative w-full bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700/90 text-white border border-slate-600/50 font-semibold py-8 px-12 rounded-2xl shadow-xl transform transition-all duration-300 ease-out hover:scale-105 group min-w-[320px]"
+            >
+              <div className="flex items-center justify-center space-x-4">
+                <div className="p-3 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-semibold">Drop an Echo</div>
+                  <div className="text-sm text-gray-300 opacity-80 mt-1">Share your thoughts anonymously</div>
+                </div>
+              </div>
+            </Button>
+          </div>
+        )}
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[500px] bg-slate-800/95 backdrop-blur-xl border-slate-600/50 text-white shadow-2xl rounded-2xl">

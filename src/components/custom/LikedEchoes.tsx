@@ -178,7 +178,7 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
               <div key={reactionKey} className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
                 <Card className="relative bg-slate-900/50 backdrop-blur-sm border-slate-600/30 rounded-xl hover:border-slate-500/50 transition-all duration-200">
-                  <CardHeader className="flex flex-row items-center justify-between pb-3 px-4 pt-4">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 px-3 pt-3">
                     <div className="flex items-center space-x-2">
                       <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full"></div>
                       <CardDescription className="text-gray-400 text-xs">
@@ -206,11 +206,11 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
                       </span>
                     </Button>
                   </CardHeader>
-                  <CardContent className="pt-0 px-4 pb-4">
+                  <CardContent className="pt-0 px-3 pb-3">
                     <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">
                       {echo.content}
                     </p>
-                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+                    <div className="mt-2 pt-2 border-t border-slate-700/50 flex justify-between items-center">
                       <div className="text-xs text-gray-500">
                         Echo #{echo.id.slice(0, 8)}
                       </div>

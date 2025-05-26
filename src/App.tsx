@@ -13,11 +13,12 @@ import { useState, useEffect } from 'react'
 // import { User } from '@supabase/supabase-js'; // Temporarily commented out due to import issues
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
-import { Heart, Sparkles, Wind, MessageSquareQuote, Loader2 } from 'lucide-react'; // Import Heart, Sparkles, and Wind icons, and MessageSquareQuote and Loader2
+import { Heart, Sparkles, Wind, MessageSquareQuote, Loader2, History } from 'lucide-react'; // Import Heart, Sparkles, and Wind icons, and MessageSquareQuote and Loader2
 import { EmptyEchoState, type NoEchoReason } from '@/components/custom/EmptyEchoState'; // Import NoEchoReason from EmptyEchoState
 import { LikedEchoes } from '@/components/custom/LikedEchoes';
 import { EchoReactions } from '@/components/EchoReactions';
 import { MoodSelector } from '@/components/MoodSelector';
+import { PersonalEchoHistory } from '@/components/PersonalEchoHistory';
 import type { EchoWithReactions } from '@/types/reactions';
 import type { EchoMood, EchoWithMood } from '@/types/moods';
 
@@ -35,6 +36,7 @@ function App() {
   const [isCatching, setIsCatching] = useState(false);
   const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
   const [selectedMoodFilter, setSelectedMoodFilter] = useState<EchoMood | null>(null);
+  const [currentView, setCurrentView] = useState<'main' | 'history'>('main');
 
   // Add ref to trigger liked echoes refresh
   const [likedEchoesRefreshTrigger, setLikedEchoesRefreshTrigger] = useState(0);
@@ -250,6 +252,19 @@ function App() {
     );
   }
 
+  // Show Personal Echo History if that view is selected
+  if (currentView === 'history') {
+    return (
+      <>
+        <Toaster richColors closeButton />
+        <PersonalEchoHistory 
+          user={user} 
+          onBack={() => setCurrentView('main')} 
+        />
+      </>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       <Toaster richColors closeButton />
@@ -260,7 +275,15 @@ function App() {
         <div className="relative backdrop-blur-sm bg-black/20 border-b border-white/10">
           <div className="container mx-auto px-6 py-6">
             {user && (
-              <div className="flex justify-end mb-3">
+              <div className="flex justify-between items-center mb-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setCurrentView('history')}
+                  className="text-gray-300 hover:text-white hover:bg-white/10 flex items-center space-x-2"
+                >
+                  <History className="w-4 h-4" />
+                  <span>My Echo History</span>
+                </Button>
                 <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10">
                   <p className="text-xs text-gray-300">Session: {user.id.slice(0, 8)}...</p>
                 </div>
@@ -390,7 +413,7 @@ function App() {
                               <div className="p-2 bg-white/5 rounded-lg">
                                 <MessageSquareQuote className="w-6 h-6 text-gray-400" />
                               </div>
-                            </div>
+      </div>
                           </CardHeader>
                           <CardContent className="space-y-6">
                             <div className="p-6 bg-white/5 rounded-xl border border-white/10">
