@@ -19,6 +19,7 @@ import { LikedEchoes } from '@/components/custom/LikedEchoes';
 import { EchoReactions } from '@/components/EchoReactions';
 import { MoodSelector } from '@/components/MoodSelector';
 import { PersonalEchoHistory } from '@/components/PersonalEchoHistory';
+import { EchoThread } from '@/components/EchoThread';
 import type { EchoWithReactions } from '@/types/reactions';
 import type { EchoMood, EchoWithMood } from '@/types/moods';
 
@@ -26,6 +27,7 @@ interface Echo extends EchoWithReactions, EchoWithMood {
   // Legacy compatibility - keeping old interface for now
   likes_count: number;
   is_liked_by_user: boolean;
+  reply_count: number;
 }
 
 function App() {
@@ -37,6 +39,7 @@ function App() {
   const [noEchoReason, setNoEchoReason] = useState<NoEchoReason>('initial'); // New state, initial as 'initial'
   const [selectedMoodFilter, setSelectedMoodFilter] = useState<EchoMood | null>(null);
   const [currentView, setCurrentView] = useState<'main' | 'history'>('main');
+  const [showThread, setShowThread] = useState(false);
 
   // Add ref to trigger liked echoes refresh
   const [likedEchoesRefreshTrigger, setLikedEchoesRefreshTrigger] = useState(0);
@@ -195,7 +198,8 @@ function App() {
           think_count,
           sad_count,
           fire_count,
-          total_reactions
+          total_reactions,
+          reply_count
         `)
         .eq('id', caughtEcho.id)
         .single();
@@ -234,7 +238,8 @@ function App() {
         mood_color: null,
         // Legacy compatibility
         likes_count: echoData.like_count,
-        is_liked_by_user: reactionTypes.includes('like')
+        is_liked_by_user: reactionTypes.includes('like'),
+        reply_count: echoData.reply_count || 0
       };
 
       setCaughtEcho(updatedEcho);
@@ -450,11 +455,22 @@ function App() {
                                 }}
                               />
                               <div className="flex justify-between items-center pt-2">
-                                <div className="text-sm text-gray-400">
-                                  {caughtEcho.total_reactions} total reactions
+                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                  <span>{caughtEcho.total_reactions} total reactions</span>
+                                  <span>{caughtEcho.reply_count} {caughtEcho.reply_count === 1 ? 'reply' : 'replies'}</span>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  Echo #{caughtEcho.id.slice(0, 8)}
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowThread(true)}
+                                    className="text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 text-xs"
+                                  >
+                                    💬 View Thread
+                                  </Button>
+                                  <div className="text-xs text-gray-500">
+                                    Echo #{caughtEcho.id.slice(0, 8)}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -491,6 +507,15 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Echo Thread Modal */}
+      {showThread && caughtEcho && (
+        <EchoThread
+          echo={caughtEcho}
+          onClose={() => setShowThread(false)}
+          onEchoUpdate={handleRefreshCurrentEcho}
+        />
+      )}
     </main>
   )
 }
