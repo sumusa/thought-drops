@@ -20,6 +20,7 @@ import { EchoReactions } from '@/components/EchoReactions';
 import { MoodSelector } from '@/components/MoodSelector';
 import { PersonalEchoHistory } from '@/components/PersonalEchoHistory';
 import { EchoThread } from '@/components/EchoThread';
+import { Footer } from '@/components/Footer';
 import type { EchoWithReactions } from '@/types/reactions';
 import type { EchoMood, EchoWithMood } from '@/types/moods';
 
@@ -516,6 +517,8 @@ function App() {
           onEchoUpdate={handleRefreshCurrentEcho}
         />
       )}
+
+      <Footer />
     </main>
   )
 }
