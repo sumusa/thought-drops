@@ -511,7 +511,7 @@ function App() {
       {/* Echo Thread Modal */}
       {showThread && caughtEcho && (
         <EchoThread
-          echo={caughtEcho}
+          echo={caughtEcho as import('src/types/echo').Echo}
           onClose={() => setShowThread(false)}
           onEchoUpdate={handleRefreshCurrentEcho}
         />
