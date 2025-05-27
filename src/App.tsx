@@ -279,7 +279,7 @@ function App() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10"></div>
         <div className="relative backdrop-blur-sm bg-black/20 border-b border-white/10">
-          <div className="container mx-auto px-6 py-6">
+          <div className="container mx-auto px-6 py-4">
             {user && (
               <div className="flex justify-between items-center mb-3">
                 <Button
@@ -296,15 +296,15 @@ function App() {
               </div>
             )}
             <div className="text-center">
-              <div className="flex items-center justify-center mb-3">
-                <div className="p-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-2xl shadow-lg">
-                  <Sparkles className="w-8 h-8 text-white" />
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-2xl shadow-lg">
+                  <Sparkles className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
                 Ephemeral Echoes
               </h1>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base text-gray-300 max-w-2xl mx-auto leading-relaxed">
                 Share anonymous thoughts that drift through the digital ether, 
                 waiting to be discovered by kindred spirits.
               </p>
@@ -314,12 +314,12 @@ function App() {
       </header>
 
       {/* Main content area with proper scrolling */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+      <div className="container mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           
           {/* Main content area - takes up 3/4 on xl screens */}
           <div className="xl:col-span-3">
-            <div className="space-y-12 pb-8">
+            <div className="space-y-8 pb-6">
               
               {/* Echo submission section with card design */}
               <section className="flex justify-center">
@@ -329,17 +329,17 @@ function App() {
               </section>
 
               {/* Discover echoes section with enhanced design */}
-              <section className="space-y-8">
-                <div className="text-center space-y-6">
+              <section className="space-y-6">
+                <div className="text-center space-y-4">
                   {/* Section header - not button-like */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-center">
                       <div className="flex items-center space-x-3 text-white">
-                        <Wind className="w-6 h-6 text-cyan-400" />
-                        <h2 className="text-3xl font-bold">Discover Echoes</h2>
+                        <Wind className="w-5 h-5 text-cyan-400" />
+                        <h2 className="text-2xl font-bold">Discover Echoes</h2>
                       </div>
                     </div>
-                    <p className="text-gray-400 text-lg max-w-lg mx-auto">
+                    <p className="text-gray-400 text-base max-w-lg mx-auto">
                       Catch whispers from anonymous minds across the void
                     </p>
                     <div className="w-24 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent mx-auto"></div>
@@ -359,17 +359,16 @@ function App() {
                   <Button 
                     onClick={handleCatchEcho} 
                     disabled={isCatching || !user} 
-                    size="lg"
-                    className="group relative overflow-hidden bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold py-6 px-12 rounded-2xl shadow-xl hover:shadow-2xl transform transition-all duration-300 ease-out hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative overflow-hidden bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-300 ease-out hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                    <div className="relative flex items-center space-x-3">
+                    <div className="relative flex items-center space-x-2">
                       {isCatching ? (
-                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
-                        <Wind className="w-6 h-6" />
+                        <Wind className="w-5 h-5" />
                       )}
-                      <span className="text-lg">
+                      <span className="text-base">
                         {isCatching ? "Searching the void..." : "Catch an Echo"}
                       </span>
                     </div>
