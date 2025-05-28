@@ -279,11 +279,11 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
 
   const handleSubmit = async () => {
     if (!echoText.trim()) {
-      toast.warning("Please write something before submitting.");
+      toast.info("Your thoughts are waiting to be shared 💭");
       return;
     }
     if (isOverLimit) {
-      toast.error(`Your echo is too long. Please keep it under ${MAX_ECHO_LENGTH} characters.`);
+      toast.info(`Almost there! Please keep your echo under ${MAX_ECHO_LENGTH} characters ✂️`);
       return;
     }
     setIsLoading(true);
@@ -302,7 +302,7 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
       toast.error(`Failed to submit echo: ${error.message}`);
     } else {
       console.log("Echo submitted successfully:", data);
-      toast.success("Your echo has been cast into the void!");
+      toast.success("Your thoughts are now part of something beautiful 💫");
       resetForm();
       setIsOpen(false);
       

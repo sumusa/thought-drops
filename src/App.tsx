@@ -158,7 +158,7 @@ function App() {
             setNoEchoReason('all_seen'); // Echoes exist, but user has seen them all
         }
         
-        toast.info("No new echoes available to catch right now. Try again later or submit one!");
+        toast.info("You've discovered all the echoes for now ✨ Why not share your own thoughts?");
       }
     } catch (error: any) {
       console.error("Error in handleCatchEcho:", error);
@@ -304,10 +304,53 @@ function App() {
               <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
                 Ephemeral Echoes
               </h1>
-              <p className="text-base text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base text-gray-300 max-w-2xl mx-auto leading-relaxed mb-4">
                 Share anonymous thoughts that drift through the digital ether, 
                 waiting to be discovered by kindred spirits.
               </p>
+              
+              {/* Demo Video Section */}
+              <div className="max-w-3xl mx-auto">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur opacity-50 group-hover:opacity-75 transition duration-300"></div>
+                  <div className="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-600/50 p-6 shadow-xl">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="flex items-center space-x-2 text-purple-400">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm font-medium">Watch Demo</span>
+                      </div>
+                    </div>
+                    
+                    {/* Placeholder for Loom video - replace with your actual embed */}
+                    <div className="aspect-video bg-slate-900/50 rounded-xl border border-slate-600/30 flex items-center justify-center">
+                      <div className="text-center space-y-3">
+                        <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center mx-auto">
+                          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-gray-300 font-medium">Demo Video Coming Soon</p>
+                          <p className="text-gray-400 text-sm">See Ephemeral Echoes in action</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Replace the above placeholder div with your Loom embed like this:
+                    <div className="aspect-video">
+                      <iframe
+                        src="https://www.loom.com/embed/YOUR_VIDEO_ID"
+                        frameBorder="0"
+                        allowFullScreen
+                        className="w-full h-full rounded-xl"
+                      ></iframe>
+                    </div>
+                    */}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
