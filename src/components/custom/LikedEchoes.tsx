@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageSquareQuote, Loader2 } from 'lucide-react';
+import { Heart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { REACTION_CONFIGS } from '@/types/reactions';
 import type { ReactionType } from '@/types/reactions';
@@ -77,20 +77,24 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
       }
 
       // Transform the data to flatten the structure
-      const transformedData = data?.map(item => ({
-        id: item.echoes.id,
-        content: item.echoes.content,
-        like_count: item.echoes.like_count,
-        love_count: item.echoes.love_count,
-        laugh_count: item.echoes.laugh_count,
-        think_count: item.echoes.think_count,
-        sad_count: item.echoes.sad_count,
-        fire_count: item.echoes.fire_count,
-        total_reactions: item.echoes.total_reactions,
-        created_at: item.echoes.created_at,
-        reaction_type: item.reaction_type as ReactionType,
-        reaction_created_at: item.created_at,
-      })) || [];
+      const transformedData = data?.map(item => {
+        // Handle both array and object cases for echoes
+        const echo = Array.isArray(item.echoes) ? item.echoes[0] : item.echoes;
+        return {
+          id: echo?.id || '',
+          content: echo?.content || '',
+          like_count: echo?.like_count || 0,
+          love_count: echo?.love_count || 0,
+          laugh_count: echo?.laugh_count || 0,
+          think_count: echo?.think_count || 0,
+          sad_count: echo?.sad_count || 0,
+          fire_count: echo?.fire_count || 0,
+          total_reactions: echo?.total_reactions || 0,
+          created_at: echo?.created_at || '',
+          reaction_type: item.reaction_type as ReactionType,
+          reaction_created_at: item.created_at,
+        };
+      }).filter(item => item.id) || []; // Filter out any items without valid echo data
 
       setReactedEchoes(transformedData);
     } catch (error: any) {

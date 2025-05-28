@@ -1,4 +1,4 @@
-import React from 'react';
+// React import removed - not needed for this component
 import { supabase } from '@/lib/supabaseClient';
 import type { EchoReply } from '@/types/threads';
 

@@ -4,10 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { 
   History, 
-  TrendingUp, 
   Heart, 
   Eye, 
-  Calendar,
   Trophy,
   Sparkles,
   ArrowLeft,
@@ -328,7 +326,8 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
                         <h4 className="text-sm font-semibold text-gray-300">Engagement Breakdown</h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {getReactionBreakdown(echo).map(({ type, count }) => {
-                            const config = REACTION_CONFIGS[type as keyof typeof REACTION_CONFIGS];
+                            const config = REACTION_CONFIGS.find(c => c.type === type);
+                            if (!config) return null;
                             return (
                               <div 
                                 key={type}

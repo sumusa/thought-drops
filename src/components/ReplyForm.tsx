@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { MoodSelector } from './MoodSelector';
 import { supabase } from '@/lib/supabaseClient';
-import type { ReplySubmission } from '@/types/threads';
+// ReplySubmission type import removed - not used in this component
 import type { EchoMood } from '@/types/moods';
 
 interface ReplyFormProps {
