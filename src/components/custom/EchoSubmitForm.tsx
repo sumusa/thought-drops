@@ -325,7 +325,7 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
         setIsLoading(false);
         
         // Get suggestions for making content unique
-        const { data: suggestions, error: suggestionsError } = await supabase.rpc(
+        const { data: suggestions } = await supabase.rpc(
           'get_content_suggestions',
           { 
             original_content: echoText.trim(),
