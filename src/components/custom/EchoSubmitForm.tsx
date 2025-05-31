@@ -250,23 +250,42 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
   const generateAIEcho = () => {
     setIsGenerating(true);
     
-    // Simulate AI processing time
     setTimeout(() => {
-      let echoes = AI_GENERATED_ECHOES;
+      // Get mood-specific echoes if a mood is selected, otherwise use general pool
+      let echoPool = selectedMood && MOOD_BASED_AI_ECHOES[selectedMood.name as keyof typeof MOOD_BASED_AI_ECHOES] 
+        ? MOOD_BASED_AI_ECHOES[selectedMood.name as keyof typeof MOOD_BASED_AI_ECHOES]
+        : AI_GENERATED_ECHOES;
       
-      // Use mood-specific echoes if a mood is selected
-      if (selectedMood && MOOD_BASED_AI_ECHOES[selectedMood.name as keyof typeof MOOD_BASED_AI_ECHOES]) {
-        const moodEchoes = MOOD_BASED_AI_ECHOES[selectedMood.name as keyof typeof MOOD_BASED_AI_ECHOES];
-        echoes = [...moodEchoes, ...AI_GENERATED_ECHOES];
-      }
+      // Add some randomization and variation to reduce exact duplicates
+      const variations = [
+        // Original echo
+        (echo: string) => echo,
+        // Add subtle variations
+        (echo: string) => echo.replace(/\.$/, '...'),
+        (echo: string) => echo.replace(/\?$/, '? 🤔'),
+        (echo: string) => echo.replace(/today/g, Math.random() > 0.5 ? 'today' : 'right now'),
+        (echo: string) => echo.replace(/I /g, Math.random() > 0.5 ? 'I ' : 'Sometimes I '),
+        (echo: string) => echo.replace(/Maybe /g, Math.random() > 0.5 ? 'Maybe ' : 'Perhaps '),
+        // Add timestamp-based uniqueness for development/testing
+        (echo: string) => {
+          if (process.env.NODE_ENV === 'development') {
+            const timeStamp = new Date().getTime().toString().slice(-4);
+            return echo + ` [${timeStamp}]`;
+          }
+          return echo;
+        }
+      ];
       
-      const randomEcho = echoes[Math.floor(Math.random() * echoes.length)];
-      setEchoText(randomEcho);
-      setCurrentPrompt(null); // Clear any existing prompt
+      // Select random echo and apply random variation
+      const randomEcho = echoPool[Math.floor(Math.random() * echoPool.length)];
+      const randomVariation = variations[Math.floor(Math.random() * variations.length)];
+      const finalEcho = randomVariation(randomEcho);
+      
+      setEchoText(finalEcho);
       setIsGenerating(false);
       
-      toast.success("🤖 AI Echo generated! Feel free to edit or use as-is.");
-    }, 1200); // Slightly longer for AI generation feel
+      toast.success("AI has whispered an echo into your mind ✨");
+    }, 1000 + Math.random() * 1000); // Random delay between 1-2 seconds
   };
 
   const usePrompt = () => {
@@ -288,28 +307,102 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
     }
     setIsLoading(true);
 
-    const { data, error } = await supabase.from("echoes").insert([
-      {
-        content: echoText,
-        mood_id: selectedMood?.id || null,
-      },
-    ]);
+    try {
+      // Check for similar content (not just exact duplicates)
+      const { data: similarityResult, error: similarityError } = await supabase.rpc(
+        'check_similar_content',
+        { 
+          content_text: echoText.trim(),
+          similarity_threshold: 0.85 // 85% similarity threshold
+        }
+      );
 
-    setIsLoading(false);
+      if (similarityError) {
+        console.error("Error checking for similar content:", similarityError);
+        // Continue with submission if similarity check fails
+      } else if (similarityResult && similarityResult.length > 0 && similarityResult[0].is_similar) {
+        const result = similarityResult[0];
+        setIsLoading(false);
+        
+        // Get suggestions for making content unique
+        const { data: suggestions, error: suggestionsError } = await supabase.rpc(
+          'get_content_suggestions',
+          { 
+            original_content: echoText.trim(),
+            mood_name: selectedMood?.name || null
+          }
+        );
 
-    if (error) {
-      console.error("Error submitting echo:", error);
-      toast.error(`Failed to submit echo: ${error.message}`);
-    } else {
-      console.log("Echo submitted successfully:", data);
-      toast.success("Your thoughts are now part of something beautiful 💫");
-      resetForm();
-      setIsOpen(false);
-      
-      // Call the callback if provided (for refreshing history page)
-      if (onEchoSubmitted) {
-        onEchoSubmitted();
+        const suggestionText = suggestions && suggestions.length > 0 
+          ? suggestions[Math.floor(Math.random() * suggestions.length)].suggestion
+          : "Try adding your personal perspective or experience to make it unique.";
+
+        toast.error(
+          `Similar echo detected (${Math.round(result.similarity_score * 100)}% match). ${suggestionText} ✨`,
+          { duration: 6000 }
+        );
+        return;
       }
+
+      // Fallback to exact duplicate check if similarity check didn't run
+      const { data: isDuplicate, error: duplicateError } = await supabase.rpc(
+        'check_duplicate_content',
+        { content_text: echoText.trim() }
+      );
+
+      if (duplicateError) {
+        console.error("Error checking for duplicates:", duplicateError);
+        // Continue with submission if duplicate check fails
+      } else if (isDuplicate) {
+        setIsLoading(false);
+        toast.error("This echo already exists in the void. Try sharing something unique! ✨");
+        return;
+      }
+
+      // Generate content hash for the new echo
+      const { data: contentHash, error: hashError } = await supabase.rpc(
+        'generate_content_hash',
+        { content_text: echoText.trim() }
+      );
+
+      if (hashError) {
+        console.error("Error generating content hash:", hashError);
+        // Continue without hash if generation fails
+      }
+
+      // Insert the echo with content hash
+      const { data, error } = await supabase.from("echoes").insert([
+        {
+          content: echoText.trim(),
+          mood_id: selectedMood?.id || null,
+          content_hash: contentHash || null,
+        },
+      ]);
+
+      setIsLoading(false);
+
+      if (error) {
+        console.error("Error submitting echo:", error);
+        if (error.code === '23505' && error.message.includes('unique_content_hash')) {
+          toast.error("This echo already exists in the void. Try sharing something unique! ✨");
+        } else {
+          toast.error(`Failed to submit echo: ${error.message}`);
+        }
+      } else {
+        console.log("Echo submitted successfully:", data);
+        toast.success("Your thoughts are now part of something beautiful 💫");
+        resetForm();
+        setIsOpen(false);
+        
+        // Call the callback if provided (for refreshing history page)
+        if (onEchoSubmitted) {
+          onEchoSubmitted();
+        }
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      console.error("Error in handleSubmit:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
 

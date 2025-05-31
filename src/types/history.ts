@@ -14,6 +14,7 @@ export interface UserEcho {
   fire_count: number;
   total_reactions: number;
   times_seen: number;
+  reply_count: number;
 }
 
 export interface UserEchoStats {

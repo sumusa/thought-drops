@@ -15,7 +15,9 @@ import {
 import { toast } from 'sonner';
 import { REACTION_CONFIGS } from '@/types/reactions';
 import { EchoSubmitForm } from '@/components/custom/EchoSubmitForm';
+import { EchoThread } from '@/components/EchoThread';
 import type { UserEcho, UserEchoStats } from '@/types/history';
+import type { Echo } from '@/types/echo';
 
 interface PersonalEchoHistoryProps {
   user: any;
@@ -33,6 +35,8 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreEchoes, setHasMoreEchoes] = useState(true);
   const [totalEchoes, setTotalEchoes] = useState(0);
+  const [showThread, setShowThread] = useState(false);
+  const [selectedThreadEcho, setSelectedThreadEcho] = useState<Echo | null>(null);
 
 
   useEffect(() => {
@@ -136,6 +140,42 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
     return reactions;
   };
 
+  const handleOpenThread = (echo: UserEcho) => {
+    // Convert UserEcho to Echo format for the thread component
+    const threadEcho: Echo = {
+      id: echo.id,
+      content: echo.content,
+      created_at: echo.created_at,
+      mood_id: echo.mood_id,
+      mood_name: echo.mood_name,
+      mood_emoji: echo.mood_emoji,
+      mood_color: echo.mood_color,
+      like_count: echo.like_count,
+      love_count: echo.love_count,
+      laugh_count: echo.laugh_count,
+      think_count: echo.think_count,
+      sad_count: echo.sad_count,
+      fire_count: echo.fire_count,
+      total_reactions: echo.total_reactions,
+      reply_count: echo.reply_count,
+      // These will be populated by the thread component
+      user_like_reaction: false,
+      user_love_reaction: false,
+      user_laugh_reaction: false,
+      user_think_reaction: false,
+      user_sad_reaction: false,
+      user_fire_reaction: false,
+    };
+    
+    setSelectedThreadEcho(threadEcho);
+    setShowThread(true);
+  };
+
+  const handleThreadUpdate = () => {
+    // Refresh the echo history to get updated reply counts
+    fetchUserHistory(1, false);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
@@ -192,12 +232,12 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
               <CardHeader className="pb-3">
                 <div className="flex items-center space-x-2">
                   <MessageSquareQuote className="w-5 h-5 text-cyan-400" />
-                  <CardTitle className="text-white text-lg">Total Echoes</CardTitle>
+                  <CardTitle className="text-white text-lg">Echoes Created</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-cyan-400">{userStats.total_echoes}</div>
-                <p className="text-sm text-gray-400 mt-1">Thoughts shared</p>
+                <p className="text-sm text-gray-400 mt-1">Your echoes in the void</p>
               </CardContent>
             </Card>
 
@@ -205,12 +245,12 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
               <CardHeader className="pb-3">
                 <div className="flex items-center space-x-2">
                   <Heart className="w-5 h-5 text-pink-400" />
-                  <CardTitle className="text-white text-lg">Total Reactions</CardTitle>
+                  <CardTitle className="text-white text-lg">Reactions Received</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-pink-400">{userStats.total_reactions_received}</div>
-                <p className="text-sm text-gray-400 mt-1">Hearts touched</p>
+                <p className="text-sm text-gray-400 mt-1">On your echoes</p>
               </CardContent>
             </Card>
 
@@ -223,7 +263,7 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-yellow-400">{userStats.most_popular_echo_reactions}</div>
-                <p className="text-sm text-gray-400 mt-1">Most reactions</p>
+                <p className="text-sm text-gray-400 mt-1">Reactions on top echo</p>
               </CardContent>
             </Card>
 
@@ -236,7 +276,7 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
               </CardHeader>
               <CardContent>
                 <div className="text-lg font-semibold text-purple-400 capitalize">{userStats.favorite_mood}</div>
-                <p className="text-sm text-gray-400 mt-1">Most used mood</p>
+                <p className="text-sm text-gray-400 mt-1">When creating echoes</p>
               </CardContent>
             </Card>
           </div>
@@ -311,6 +351,17 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
                           <Eye className="w-4 h-4" />
                           <span>{echo.times_seen}</span>
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenThread(echo);
+                          }}
+                          className="flex items-center space-x-1 hover:text-purple-400 transition-colors"
+                          title={`View thread (${echo.reply_count} ${echo.reply_count === 1 ? 'reply' : 'replies'})`}
+                        >
+                          <MessageSquareQuote className="w-4 h-4" />
+                          <span className="text-sm font-medium">{echo.reply_count || 0}</span>
+                        </button>
                       </div>
                     </div>
                   </CardHeader>
@@ -376,6 +427,18 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
           )}
         </div>
       </div>
+
+      {/* Echo Thread Modal */}
+      {showThread && selectedThreadEcho && (
+        <EchoThread
+          echo={selectedThreadEcho}
+          onClose={() => {
+            setShowThread(false);
+            setSelectedThreadEcho(null);
+          }}
+          onEchoUpdate={handleThreadUpdate}
+        />
+      )}
     </div>
   );
 } 
