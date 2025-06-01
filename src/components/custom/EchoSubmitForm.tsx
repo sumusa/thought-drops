@@ -377,7 +377,7 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
           mood_id: selectedMood?.id || null,
           content_hash: contentHash || null,
         },
-      ]);
+      ]).select();
 
       setIsLoading(false);
 
@@ -388,8 +388,34 @@ export function EchoSubmitForm({ onEchoSubmitted, compact = false }: EchoSubmitF
         } else {
           toast.error(`Failed to submit echo: ${error.message}`);
         }
-      } else {
-        console.log("Echo submitted successfully:", data);
+      } else if (data && data.length > 0) {
+        const submittedEcho = data[0];
+        console.log("Echo submitted successfully:", submittedEcho);
+        
+        // IMPORTANT: Mark the user as having "seen" their own echo immediately
+        // This establishes ownership in the echo history system
+        try {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser) {
+            const { error: seenError } = await supabase
+              .from('seen_echoes')
+              .insert({ 
+                user_id: currentUser.id, 
+                echo_id: submittedEcho.id 
+              });
+            
+            if (seenError) {
+              console.error("Error marking own echo as seen:", seenError);
+              // Don't show error to user as the echo was submitted successfully
+            } else {
+              console.log("Successfully marked own echo as seen for history tracking");
+            }
+          }
+        } catch (trackingError) {
+          console.error("Error in ownership tracking:", trackingError);
+          // Don't fail the submission over tracking issues
+        }
+        
         toast.success("Your thoughts are now part of something beautiful 💫");
         resetForm();
         setIsOpen(false);

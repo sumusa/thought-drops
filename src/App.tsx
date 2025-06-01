@@ -87,6 +87,40 @@ function App() {
     };
   }, []); // Reverted dependency array to empty
 
+  // Add URL hash navigation for persistent view state
+  useEffect(() => {
+    // Read initial view from URL hash
+    const hash = window.location.hash.slice(1); // Remove the #
+    if (hash === 'history') {
+      setCurrentView('history');
+    }
+    
+    // Listen for hash changes
+    const handleHashChange = () => {
+      const newHash = window.location.hash.slice(1);
+      if (newHash === 'history') {
+        setCurrentView('history');
+      } else {
+        setCurrentView('main');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  // Update URL when view changes
+  const handleViewChange = (view: 'main' | 'history') => {
+    setCurrentView(view);
+    if (view === 'history') {
+      window.history.pushState(null, '', '#history');
+    } else {
+      window.history.pushState(null, '', '#');
+    }
+  };
+
   const handleCatchEcho = async () => {
     if (!user || !user.id) {
         toast.info("Authenticating... Please try again in a moment.");
@@ -265,7 +299,7 @@ function App() {
         <Toaster richColors closeButton />
         <PersonalEchoHistory 
           user={user} 
-          onBack={() => setCurrentView('main')} 
+          onBack={() => handleViewChange('main')} 
         />
       </>
     );
@@ -284,7 +318,7 @@ function App() {
               <div className="flex justify-between items-center mb-3">
                 <Button
                   variant="ghost"
-                  onClick={() => setCurrentView('history')}
+                  onClick={() => handleViewChange('history')}
                   className="text-gray-300 hover:text-white hover:bg-white/10 flex items-center space-x-2"
                 >
                   <History className="w-4 h-4" />

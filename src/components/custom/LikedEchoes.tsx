@@ -205,9 +205,6 @@ export function LikedEchoes({ user, onUnlike, refreshTrigger }: LikedEchoesProps
                       ) : (
                         <span className="text-sm">{reactionConfig?.emoji || '❓'}</span>
                       )}
-                      <span className="text-xs font-medium">
-                        {echo[`${echo.reaction_type}_count` as keyof ReactedEcho] as number}
-                      </span>
                     </Button>
                   </CardHeader>
                   <CardContent className="pt-0 px-3 pb-3">
