@@ -151,6 +151,7 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
       mood_emoji: echo.mood_emoji,
       mood_color: echo.mood_color,
       like_count: echo.like_count,
+      likes_count: echo.like_count,
       love_count: echo.love_count,
       laugh_count: echo.laugh_count,
       think_count: echo.think_count,
@@ -158,6 +159,7 @@ export function PersonalEchoHistory({ user, onBack }: PersonalEchoHistoryProps) 
       fire_count: echo.fire_count,
       total_reactions: echo.total_reactions,
       reply_count: echo.reply_count,
+      is_liked_by_user: false,
       // These will be populated by the thread component
       user_like_reaction: false,
       user_love_reaction: false,
